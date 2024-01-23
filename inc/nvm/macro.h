@@ -17,8 +17,8 @@
  *  limitations under the License.
  */
 
-#ifndef NAVA_CORE_UTILS_V2_MACRO_H
-#define NAVA_CORE_UTILS_V2_MACRO_H
+#ifndef NVM_CORE_V2_MACRO_H
+#define NVM_CORE_V2_MACRO_H
 
 namespace nvm {
 

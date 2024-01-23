@@ -17,8 +17,8 @@
  *  limitations under the License.
  */
 
-#ifndef NAVA_CORE_UTILS_V2_NULLABLE_H
-#define NAVA_CORE_UTILS_V2_NULLABLE_H
+#ifndef NVM_CORE_V2_NULLABLE_H
+#define NVM_CORE_V2_NULLABLE_H
 
 #include <optional>
 
