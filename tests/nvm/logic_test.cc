@@ -56,5 +56,5 @@ TEST_CASE("logic::GetIntersect double test eq", "[logic][IsBetween][double]") {
   auto res = logic::GetIntersect(range1,range2);
   REQUIRE(res.start ==0.8);
   REQUIRE(res.end ==0.9);
-  REQUIRE(res.Distance() == maths::Approx(0.1).epsilon(0.01));
+  REQUIRE(res.Distance() == maths::Approx(0.1).Epsilon(0.01));
 }

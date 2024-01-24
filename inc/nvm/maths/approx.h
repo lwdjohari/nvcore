@@ -74,7 +74,7 @@ public:
      * @param newEpsilon The new tolerance value.
      * @return Reference to the modified Approx object.
      */
-    Approx& epsilon(T newEpsilon) {
+    Approx& Epsilon(T newEpsilon) {
         epsilon_ = newEpsilon;
         return *this;
     }
