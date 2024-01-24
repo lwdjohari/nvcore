@@ -14,7 +14,14 @@ option(LIB_NVM_CORE_BUILD_DOC "Build documentation" OFF)
 option(LIB_NVM_CORE_SANITIZE_ADDRESS "SANITIZE ADDRESS" ON)
 option(LIB_NVM_CORE_USE_CATCH ON)
 option(LIB_NVM_CORE_USE_LIB ON)
-option(LIB_NVM_CORE_USE_TEST OFF)
+option(LIB_NVM_CORE_USE_TEST ON)
+
+set(LIB_NVM_CORE_BUILD_DOC OFF)
+set(LIB_NVM_CORE_SANITIZE_ADDRESS ON)
+set(LIB_NVM_CORE_USE_CATCH ON)
+set(LIB_NVM_CORE_USE_LIB ON)
+set(LIB_NVM_CORE_USE_TEST ON)
+
 
 # Add ASAN
 if(LIB_NVM_CORE_SANITIZE_ADDRESS)
@@ -66,8 +73,8 @@ file(GLOB_RECURSE SOURCES_NVM_CORE CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.s
 )
 
-add_library(${PROJECT_NAME} ${SOURCES_NVM_CORE} )
-target_link_libraries(${PROJECT_NAME} utf8cpp )
+add_library(${PROJECT_NAME} STATIC ${SOURCES_NVM_CORE} )
+target_link_libraries(${PROJECT_NAME}  utf8cpp )
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 target_include_directories(${PROJECT_NAME}
@@ -82,7 +89,8 @@ if(Sanitizers_FOUND)
     message(STATUS "${PROJECT_NAME}-test_LIB::ASAN:ON.")
 endif()
 
-target_link_libraries(${PROJECT_NAME}-test PUBLIC ${PROJECT_NAME} )
+target_link_libraries(${PROJECT_NAME}-test PRIVATE ${PROJECT_NAME} )
+target_compile_features(${PROJECT_NAME}-test PUBLIC cxx_std_17)
 target_include_directories("${PROJECT_NAME}-test"
     PUBLIC
         inc/
@@ -90,8 +98,8 @@ target_include_directories("${PROJECT_NAME}-test"
 
 if(LIB_NVM_CORE_USE_TEST)
     message(STATUS "TEST::ADD_UNIT_TEST.")
-    add_subdirectory(tests)
+    add_subdirectory(tests/nvm)
 endif()       
 
-message(STATUS "Nava::Core LIB Configuration Done!\n")
+message(STATUS "NVM::Core LIB Configuration Done!\n")
 set(nvm_core_FOUND  ON)
