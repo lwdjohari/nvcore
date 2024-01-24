@@ -23,6 +23,8 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "nvm/macro.h"
+
 namespace nvm {
 namespace bytes {
 
@@ -41,7 +43,6 @@ enum class ByteOpResult {
   SizeMismatch = 2,
   None = 4,
 };
-
 
 NVM_ENUM_CLASS_DISPLAY_TRAIT(ByteOpResult)
 
