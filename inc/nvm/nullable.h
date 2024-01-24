@@ -33,12 +33,16 @@ class Nullable : public std::optional<T> {
  public:
   Nullable() noexcept = default;
 
+  // cppcheck-suppress noExplicitConstructor
   Nullable(std::nullptr_t) noexcept {}
 
+  // cppcheck-suppress noExplicitConstructor
   Nullable(T const &val) : std::optional<T>(val) {}
 
+  // cppcheck-suppress noExplicitConstructor
   Nullable(std::optional<T> const &opt) noexcept : std::optional<T>(opt) {}
 
+  // cppcheck-suppress noExplicitConstructor
   Nullable(std::optional<T> &&opt) noexcept
       : std::optional<T>(std::move(opt)) {}
 
