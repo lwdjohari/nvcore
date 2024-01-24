@@ -25,8 +25,8 @@
 #include <type_traits>
 
 #include "nvm/bytes/byte_declaration.h"
-#include "nvm/bytes/details/internal_byte_u8.h"
 #include "nvm/bytes/details/internal_byte_ch.h"
+#include "nvm/bytes/details/internal_byte_u8.h"
 #include "nvm/strings/utf8string.h"
 
 namespace nvm {
@@ -49,12 +49,12 @@ ByteOpResult CopyBytes(const T *src, const T *dest,
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
 
-  ByteOpResult result = ByteOpResult::None;
   if constexpr (std::is_same<T, uint8_t>::value) {
     details::u8::CopyBytes(src, dest, size);
-    return result;
+    return ByteOpResult::Ok;
   } else {
-    return ByteOpResult::None;
+    details::ch::CopyBytes(src, dest, size);
+    return ByteOpResult::Ok;
   }
 };
 
@@ -80,6 +80,7 @@ ByteOpResult ToBytes(
       details::u8::EncodeAsciiString(val, dest, dest_size, result);
       return result;
     } else {
+      details::ch::EncodeAsciiString(val, dest, dest_size, result);
       return result;
     }
   } else if constexpr (std::is_same<TVal, Utf8String>::value) {
@@ -92,6 +93,7 @@ ByteOpResult ToBytes(
       details::u8::EncodeUInt8(val ? 1 : 0, dest, dest_size, result);
       return result;
     } else {
+      details::ch::EncodeUInt8(val ? 1 : 0, dest, dest_size, result);
       return result;
     }
 
@@ -101,6 +103,7 @@ ByteOpResult ToBytes(
       details::u8::EncodeFloat(&val, dest, dest_size, result, is_big_endian);
       return result;
     } else {
+      details::ch::EncodeFloat(&val, dest, dest_size, result, is_big_endian);
       return result;
     }
   } else if constexpr (std::is_same<TVal, double>::value) {
@@ -109,6 +112,7 @@ ByteOpResult ToBytes(
       details::u8::EncodeDouble(&val, dest, dest_size, result, is_big_endian);
       return result;
     } else {
+      details::ch::EncodeDouble(&val, dest, dest_size, result, is_big_endian);
       return result;
     }
   } else if constexpr (std::is_same<TVal, int8_t>::value) {
@@ -117,6 +121,7 @@ ByteOpResult ToBytes(
       details::u8::EncodeInt8(&val, dest, dest_size, result, is_big_endian);
       return result;
     } else {
+      details::ch::EncodeInt8(&val, dest, dest_size, result, is_big_endian);
       return result;
     }
   } else if constexpr (std::is_same<TVal, int16_t>::value) {
@@ -125,22 +130,26 @@ ByteOpResult ToBytes(
       details::u8::EncodeInt16(&val, dest, dest_size, result, is_big_endian);
       return result;
     } else {
+      details::ch::EncodeInt16(&val, dest, dest_size, result, is_big_endian);
+      return result;
     }
+
   } else if constexpr (std::is_same<TVal, int32_t>::value) {
     ByteOpResult result = ByteOpResult::None;
     if constexpr (std::is_same<TSeq, uint8_t>::value) {
       details::u8::EncodeInt32(&val, dest, dest_size, result, is_big_endian);
       return result;
     } else {
+      details::ch::EncodeInt32(&val, dest, dest_size, result, is_big_endian);
       return result;
     }
   } else if constexpr (std::is_same<TVal, int64_t>::value) {
     ByteOpResult result = ByteOpResult::None;
     if constexpr (std::is_same<TSeq, uint8_t>::value) {
       details::u8::EncodeInt64(&val, dest, dest_size, result, is_big_endian);
-      ;
       return result;
     } else {
+      details::ch::EncodeInt64(&val, dest, dest_size, result, is_big_endian);
       return result;
     }
   } else if constexpr (std::is_same<TVal, uint8_t>::value) {
@@ -149,6 +158,7 @@ ByteOpResult ToBytes(
       details::u8::EncodeUInt8(&val, dest, dest_size, result, is_big_endian);
       return result;
     } else {
+      details::ch::EncodeUInt8(&val, dest, dest_size, result, is_big_endian);
       return result;
     }
   } else if constexpr (std::is_same<TVal, uint16_t>::value) {
@@ -157,6 +167,7 @@ ByteOpResult ToBytes(
       details::u8::EncodeUInt16(&val, dest, dest_size, result, is_big_endian);
       return result;
     } else {
+      details::ch::EncodeUInt16(&val, dest, dest_size, result, is_big_endian);
       return result;
     }
   } else if constexpr (std::is_same<TVal, uint32_t>::value) {
@@ -165,6 +176,7 @@ ByteOpResult ToBytes(
       details::u8::EncodeUInt32(&val, dest, dest_size, result, is_big_endian);
       return result;
     } else {
+      details::ch::EncodeUInt32(&val, dest, dest_size, result, is_big_endian);
       return result;
     }
   } else if constexpr (std::is_same<TVal, uint64_t>::value) {
@@ -173,6 +185,7 @@ ByteOpResult ToBytes(
       details::u8::EncodeUInt64(&val, dest, dest_size, result, is_big_endian);
       return result;
     } else {
+      details::ch::EncodeUInt64(&val, dest, dest_size, result, is_big_endian);
       return result;
     }
   }
@@ -189,7 +202,7 @@ uint8_t ToUint8(const T *bytes, const size_t &size,
   if constexpr (std::is_same<T, uint8_t>::value) {
     return details::u8::DecodeUInt8(bytes, size, result);
   } else {
-    return 0;
+    return details::ch::DecodeUInt8(bytes, size, result);
   }
 };
 
@@ -203,7 +216,8 @@ uint16_t ToUint16(const T *bytes, const size_t &size, ByteOpResult &result,
     return details::u8::DecodeUInt16(bytes, size, result,
                                      target == EndianessType::BigEndian);
   } else {
-    return 0;
+    return details::ch::DecodeUInt16(bytes, size, result,
+                                     target == EndianessType::BigEndian);
   }
 };
 
@@ -232,7 +246,8 @@ uint64_t ToUint64(const T *bytes, const size_t &size, ByteOpResult &result,
     return details::u8::DecodeUInt64(bytes, size, result,
                                      target == EndianessType::BigEndian);
   } else {
-    return 0;
+    return details::ch::DecodeUInt64(bytes, size, result,
+                                     target == EndianessType::BigEndian);
   }
 };
 
@@ -245,7 +260,7 @@ int8_t ToInt8(const T *bytes, const size_t &size,
   if constexpr (std::is_same<T, uint8_t>::value) {
     return details::u8::DecodeInt8(bytes, size, result);
   } else {
-    return 0;
+    return details::ch::DecodeInt8(bytes, size, result);
   }
 };
 
@@ -259,7 +274,8 @@ int16_t ToInt16(const T *bytes, const size_t &size, ByteOpResult &result,
     return details::u8::DecodeInt16(bytes, size, result),
            target == EndianessType::BigEndian;
   } else {
-    return 0;
+    return details::ch::DecodeInt16(bytes, size, result,
+                                    target == EndianessType::BigEndian);
   }
 };
 
@@ -273,7 +289,8 @@ int32_t ToInt32(const T *bytes, const size_t &size, ByteOpResult &result,
     return details::u8::DecodeInt32(bytes, size, result,
                                     target == EndianessType::BigEndian);
   } else {
-    return 0;
+    return details::ch::DecodeInt32(bytes, size, result,
+                                    target == EndianessType::BigEndian);
   }
 };
 
@@ -287,7 +304,8 @@ int64_t ToInt64(const T *bytes, const size_t &size, ByteOpResult &result,
     return details::u8::DecodeInt64(bytes, size, result,
                                     target == EndianessType::BigEndian);
   } else {
-    return 0;
+    return details::ch::DecodeInt64(bytes, size, result,
+                                    target == EndianessType::BigEndian);
   }
 };
 
@@ -301,7 +319,8 @@ float ToFloat(const T *bytes, const size_t &size, ByteOpResult &result,
     return details::u8::DecodeFloat(bytes, size, result,
                                     target == EndianessType::BigEndian);
   } else {
-    return 0;
+    return details::ch::DecodeFloat(bytes, size, result,
+                                    target == EndianessType::BigEndian);
   }
 };
 
@@ -314,7 +333,8 @@ double ToDouble(const T *bytes, const size_t &size, ByteOpResult &result,
     return details::u8::DecodeDouble(bytes, size, result,
                                      target == EndianessType::BigEndian);
   } else {
-    return 0;
+    return details::ch::DecodeDouble(bytes, size, result,
+                                     target == EndianessType::BigEndian);
   }
 };
 
@@ -327,7 +347,7 @@ std::string ToAsciiString(
   if constexpr (std::is_same<T, uint8_t>::value) {
     return details::u8::DecodeAsciiString(bytes, size, result);
   } else {
-    return 0;
+    return details::ch::DecodeAsciiString(bytes, size, result);
   }
 };
 

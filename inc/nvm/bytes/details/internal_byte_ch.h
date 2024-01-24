@@ -55,7 +55,7 @@ namespace bytes {
 namespace details {
 namespace ch {
 
-void CopyBytes(const uint8_t *src, uint8_t *dest, size_t size,
+void CopyBytes(const char *src, char *dest, size_t size,
                ByteOpResult &err) noexcept {
   if (size == 0) {
     err = ByteOpResult::SizeMismatch;
@@ -68,10 +68,10 @@ void CopyBytes(const uint8_t *src, uint8_t *dest, size_t size,
   }
 
   // size always 1
-  std::memcpy(dest, src, size);
+  std::memcpy(dest, src, size * sizeof(char));
 }
 
-void EncodeInt8(int8_t value, char *buffer, size_t size, ByteOpResult &err) {
+void EncodeInt8(const int8_t &value, char *buffer, size_t size, ByteOpResult &err) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return;
@@ -82,12 +82,11 @@ void EncodeInt8(int8_t value, char *buffer, size_t size, ByteOpResult &err) {
     return;
   }
 
-  buffer[0] = static_cast<uint8_t>(value);
+  buffer[0] = static_cast<uint8_t>(int8_t(value));
   err = ByteOpResult::Ok;
 }
 
-void EncodeUInt8(uint8_t value, char *buffer, size_t size,
-                 ByteOpResult &err) {
+void EncodeUInt8(const uint8_t &value, char *buffer, size_t size, ByteOpResult &err) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return;
@@ -98,40 +97,7 @@ void EncodeUInt8(uint8_t value, char *buffer, size_t size,
     return;
   }
 
-  buffer[0] = value;
-  err = ByteOpResult::Ok;
-}
-
-void EncodeInt16(int16_t value, char *buffer, size_t size, ByteOpResult &err,
-                 bool is_big_endian) {
-  if (!buffer) {
-    err = ByteOpResult::Nullptr;
-    return;
-  }
-
-  if (size < 2) {
-    err = ByteOpResult::SizeMismatch;
-    return;
-  }
-
-  // uint16_t val = static_cast<uint16_t>(value);
-#if NVM_HOST_ENDIAN == ENDIANESS_LITTLE_ENDIAN
-  if (!is_big_endian) {
-    buffer[0] = static_cast<uint8_t>(value & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 8) & 0xff);
-  } else {
-    buffer[1] = static_cast<uint8_t>(value & 0xff);
-    buffer[0] = static_cast<uint8_t>((value >> 8) & 0xff);
-  }
-#elif NVM_HOST_ENDIAN == ENDIANESS_BIG_ENDIAN
-  if (is_big_endian) {
-    buffer[0] = static_cast<uint8_t>(value & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 8) & 0xff);
-  } else {
-    buffer[1] = static_cast<uint8_t>(value & 0xff);
-    buffer[0] = static_cast<uint8_t>((value >> 8) & 0xff);
-  }
-#endif
+  buffer[0] = uint8_t(value);
   err = ByteOpResult::Ok;
 }
 
@@ -173,36 +139,6 @@ void EncodeInt16(const int16_t *value, char *buffer, size_t size,
   err = ByteOpResult::Ok;
 }
 
-void EncodeUInt16(uint16_t value, char *buffer, size_t size,
-                  ByteOpResult &err, bool is_big_endian) {
-  if (!buffer) {
-    err = ByteOpResult::Nullptr;
-    return;
-  }
-
-  if (size < 2) {
-    err = ByteOpResult::SizeMismatch;
-    return;
-  }
-#if NVM_HOST_ENDIAN == ENDIANESS_LITTLE_ENDIAN
-  if (!is_big_endian) {
-    buffer[0] = static_cast<uint8_t>(value & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 8) & 0xff);
-  } else {
-    buffer[1] = static_cast<uint8_t>(value & 0xff);
-    buffer[0] = static_cast<uint8_t>((value >> 8) & 0xff);
-  }
-#elif NVM_HOST_ENDIAN == ENDIANESS_BIG_ENDIAN
-  if (is_big_endian) {
-    buffer[0] = static_cast<uint8_t>(value & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 8) & 0xff);
-  } else {
-    buffer[1] = static_cast<uint8_t>(value & 0xff);
-    buffer[0] = static_cast<uint8_t>((value >> 8) & 0xff);
-  }
-#endif
-  err = ByteOpResult::Ok;
-}
 
 void EncodeUInt16(const uint16_t *value, char *buffer, size_t size,
                   ByteOpResult &err, bool is_big_endian) {
@@ -238,48 +174,6 @@ void EncodeUInt16(const uint16_t *value, char *buffer, size_t size,
   } else {
     buffer[1] = static_cast<uint8_t>(*copied_ptr & 0xff);
     buffer[0] = static_cast<uint8_t>((*copied_ptr >> 8) & 0xff);
-  }
-#endif
-  err = ByteOpResult::Ok;
-}
-
-void EncodeInt32(int32_t value, char *buffer, size_t size, ByteOpResult &err,
-                 bool is_big_endian) {
-  if (!buffer) {
-    err = ByteOpResult::Nullptr;
-    return;
-  }
-
-  if (size < sizeof(value)) {
-    err = ByteOpResult::SizeMismatch;
-    return;
-  }
-
-#if NVM_HOST_ENDIAN == ENDIANESS_LITTLE_ENDIAN
-
-  // uint32_t val = static_cast<uint32_t>(value);
-  if (!is_big_endian) {
-    buffer[0] = static_cast<uint8_t>(value & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[3] = static_cast<uint8_t>((value >> 24) & 0xff);
-  } else {
-    buffer[3] = static_cast<uint8_t>(value & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[0] = static_cast<uint8_t>((value >> 24) & 0xff);
-  }
-#elif NVM_HOST_ENDIAN == ENDIANESS_BIG_ENDIAN
-  if (is_big_endian) {
-    buffer[0] = static_cast<uint8_t>(value & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[3] = static_cast<uint8_t>((value >> 24) & 0xff);
-  } else {
-    buffer[3] = static_cast<uint8_t>(value & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[0] = static_cast<uint8_t>((value >> 24) & 0xff);
   }
 #endif
   err = ByteOpResult::Ok;
@@ -333,47 +227,6 @@ void EncodeInt32(const int32_t *value, char *buffer, size_t size,
   err = ByteOpResult::Ok;
 }
 
-void EncodeUInt32(uint32_t value, char *buffer, size_t size,
-                  ByteOpResult &err, bool is_big_endian) {
-  if (!buffer) {
-    err = ByteOpResult::Nullptr;
-    return;
-  }
-
-  if (size < 4) {
-    err = ByteOpResult::SizeMismatch;
-    return;
-  }
-
-#if NVM_HOST_ENDIAN == ENDIANESS_LITTLE_ENDIAN
-
-  if (!is_big_endian) {
-    buffer[0] = static_cast<uint8_t>(value & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[3] = static_cast<uint8_t>((value >> 24) & 0xff);
-  } else {
-    buffer[3] = static_cast<uint8_t>(value & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[0] = static_cast<uint8_t>((value >> 24) & 0xff);
-  }
-#elif NVM_HOST_ENDIAN == ENDIANESS_BIG_ENDIAN
-  if (is_big_endian) {
-    buffer[0] = static_cast<uint8_t>(value & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[3] = static_cast<uint8_t>((value >> 24) & 0xff);
-  } else {
-    buffer[3] = static_cast<uint8_t>(value & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[0] = static_cast<uint8_t>((value >> 24) & 0xff);
-  }
-#endif
-  err = ByteOpResult::Ok;
-}
-
 void EncodeUInt32(const uint32_t *value, char *buffer, size_t size,
                   ByteOpResult &err, bool is_big_endian) {
   if (!buffer || !value) {
@@ -422,64 +275,6 @@ void EncodeUInt32(const uint32_t *value, char *buffer, size_t size,
     buffer[2] = static_cast<uint8_t>((*copied_ptr >> 8) & 0xff);
     buffer[1] = static_cast<uint8_t>((*copied_ptr >> 16) & 0xff);
     buffer[0] = static_cast<uint8_t>((*copied_ptr >> 24) & 0xff);
-  }
-#endif
-  err = ByteOpResult::Ok;
-}
-
-void EncodeInt64(int64_t value, char *buffer, size_t size, ByteOpResult &err,
-                 bool is_big_endian) {
-  if (!buffer) {
-    err = ByteOpResult::Nullptr;
-    return;
-  }
-
-  if (size < 8) {
-    err = ByteOpResult::SizeMismatch;
-    return;
-  }
-
-  // uint64_t val = static_cast<uint64_t>(value);
-#if NVM_HOST_ENDIAN == ENDIANESS_LITTLE_ENDIAN
-  if (!is_big_endian) {
-    buffer[0] = static_cast<uint8_t>(value & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[3] = static_cast<uint8_t>((value >> 24) & 0xff);
-    buffer[4] = static_cast<uint8_t>((value >> 32) & 0xff);
-    buffer[5] = static_cast<uint8_t>((value >> 40) & 0xff);
-    buffer[6] = static_cast<uint8_t>((value >> 48) & 0xff);
-    buffer[7] = static_cast<uint8_t>((value >> 56) & 0xff);
-  } else {
-    buffer[7] = static_cast<uint8_t>(value & 0xff);
-    buffer[6] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[5] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[4] = static_cast<uint8_t>((value >> 24) & 0xff);
-    buffer[3] = static_cast<uint8_t>((value >> 32) & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 40) & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 48) & 0xff);
-    buffer[0] = static_cast<uint8_t>((value >> 56) & 0xff);
-  }
-
-#elif NVM_HOST_ENDIAN == ENDIANESS_BIG_ENDIAN
-  if (is_big_endian) {
-    buffer[0] = static_cast<uint8_t>(value & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[3] = static_cast<uint8_t>((value >> 24) & 0xff);
-    buffer[4] = static_cast<uint8_t>((value >> 32) & 0xff);
-    buffer[5] = static_cast<uint8_t>((value >> 40) & 0xff);
-    buffer[6] = static_cast<uint8_t>((value >> 48) & 0xff);
-    buffer[7] = static_cast<uint8_t>((value >> 56) & 0xff);
-  } else {
-    buffer[7] = static_cast<uint8_t>(value & 0xff);
-    buffer[6] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[5] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[4] = static_cast<uint8_t>((value >> 24) & 0xff);
-    buffer[3] = static_cast<uint8_t>((value >> 32) & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 40) & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 48) & 0xff);
-    buffer[0] = static_cast<uint8_t>((value >> 56) & 0xff);
   }
 #endif
   err = ByteOpResult::Ok;
@@ -543,63 +338,6 @@ void EncodeInt64(const int64_t *value, char *buffer, size_t size,
     buffer[2] = static_cast<uint8_t>((*copied_ptr >> 40) & 0xff);
     buffer[1] = static_cast<uint8_t>((*copied_ptr >> 48) & 0xff);
     buffer[0] = static_cast<uint8_t>((*copied_ptr >> 56) & 0xff);
-  }
-#endif
-  err = ByteOpResult::Ok;
-}
-
-void EncodeUInt64(uint64_t value, char *buffer, size_t size,
-                  ByteOpResult &err, bool is_big_endian) {
-  if (!buffer) {
-    err = ByteOpResult::Nullptr;
-    return;
-  }
-
-  if (size < sizeof(value)) {
-    err = ByteOpResult::SizeMismatch;
-    return;
-  }
-
-#if NVM_HOST_ENDIAN == ENDIANESS_LITTLE_ENDIAN
-
-  if (!is_big_endian) {
-    buffer[0] = static_cast<uint8_t>(value & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[3] = static_cast<uint8_t>((value >> 24) & 0xff);
-    buffer[4] = static_cast<uint8_t>((value >> 32) & 0xff);
-    buffer[5] = static_cast<uint8_t>((value >> 40) & 0xff);
-    buffer[6] = static_cast<uint8_t>((value >> 48) & 0xff);
-    buffer[7] = static_cast<uint8_t>((value >> 56) & 0xff);
-  } else {
-    buffer[7] = static_cast<uint8_t>(value & 0xff);
-    buffer[6] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[5] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[4] = static_cast<uint8_t>((value >> 24) & 0xff);
-    buffer[3] = static_cast<uint8_t>((value >> 32) & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 40) & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 48) & 0xff);
-    buffer[0] = static_cast<uint8_t>((value >> 56) & 0xff);
-  }
-#elif NVM_HOST_ENDIAN == ENDIANESS_BIG_ENDIAN
-  if (is_big_endian) {
-    buffer[0] = static_cast<uint8_t>(value & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[3] = static_cast<uint8_t>((value >> 24) & 0xff);
-    buffer[4] = static_cast<uint8_t>((value >> 32) & 0xff);
-    buffer[5] = static_cast<uint8_t>((value >> 40) & 0xff);
-    buffer[6] = static_cast<uint8_t>((value >> 48) & 0xff);
-    buffer[7] = static_cast<uint8_t>((value >> 56) & 0xff);
-  } else {
-    buffer[7] = static_cast<uint8_t>(value & 0xff);
-    buffer[6] = static_cast<uint8_t>((value >> 8) & 0xff);
-    buffer[5] = static_cast<uint8_t>((value >> 16) & 0xff);
-    buffer[4] = static_cast<uint8_t>((value >> 24) & 0xff);
-    buffer[3] = static_cast<uint8_t>((value >> 32) & 0xff);
-    buffer[2] = static_cast<uint8_t>((value >> 40) & 0xff);
-    buffer[1] = static_cast<uint8_t>((value >> 48) & 0xff);
-    buffer[0] = static_cast<uint8_t>((value >> 56) & 0xff);
   }
 #endif
   err = ByteOpResult::Ok;
@@ -669,26 +407,6 @@ void EncodeUInt64(const uint64_t *value, char *buffer, size_t size,
   err = ByteOpResult::Ok;
 }
 
-void EncodeFloat(float value, char *buffer, size_t size, ByteOpResult &err,
-                 bool is_big_endian) {
-  if (!buffer) {
-    err = ByteOpResult::Nullptr;
-    return;
-  }
-
-  if (size < 4) {
-    err = ByteOpResult::SizeMismatch;
-    return;
-  }
-
-  uint32_t int_value;
-  std::memcpy(&int_value, &value, sizeof(int_value));
-
-  EncodeUInt32(int_value, buffer, size, err, is_big_endian);
-
-  err = ByteOpResult::Ok;
-}
-
 void EncodeFloat(const float *value, char *buffer, size_t size,
                  ByteOpResult &err, bool is_big_endian) {
   if (!buffer || !value) {
@@ -714,25 +432,6 @@ void EncodeFloat(const float *value, char *buffer, size_t size,
   EncodeUInt32(&int_value, buffer, size, err, is_big_endian);
 
   err = ByteOpResult::Ok;
-}
-
-void EncodeDouble(double value, char *buffer, size_t size, ByteOpResult &err,
-                  bool is_big_endian) {
-  if (!buffer) {
-    err = ByteOpResult::Nullptr;
-    return;
-  }
-
-  if (size < 8) {
-    err = ByteOpResult::SizeMismatch;
-    return;
-  }
-
-  uint64_t long_value;
-
-  std::memcpy(&long_value, &value, sizeof(long_value));
-
-  EncodeUInt64(long_value, buffer, size, err, is_big_endian);
 }
 
 void EncodeDouble(const double *value, char *buffer, size_t size,
@@ -1145,7 +844,7 @@ std::string DecodeAsciiString(const char *buffer, size_t size,
   return std::string(reinterpret_cast<const char *>(buffer), size);
 }
 
-}  // namespace u8
+}  // namespace ch
 }  // namespace details
 }  // namespace bytes
 }  // namespace nvm
