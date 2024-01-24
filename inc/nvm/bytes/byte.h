@@ -22,9 +22,10 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <type_traits>
+#include <vector>
 
-#include "nvm/bytes/byte_declaration.h"
 #include "nvm/bytes/details/internal_byte_ch.h"
 #include "nvm/bytes/details/internal_byte_u8.h"
 #include "nvm/strings/utf8string.h"
@@ -33,7 +34,9 @@ namespace nvm {
 namespace bytes {
 using namespace strings;
 
-EndianessType HostEndianess() {
+/// @brief
+/// @return
+inline EndianessType HostEndianess() {
 #if NVM_HOST_ENDIAN == ENDIANESS_LITTLE_ENDIAN
   return EndianessType::LittleEndian;
 #elif NVM_HOST_ENDIAN == ENDIANESS_BIG_ENDIAN
@@ -43,6 +46,12 @@ EndianessType HostEndianess() {
 #endif
 }
 
+/// @brief
+/// @tparam T char or uint8_t
+/// @param src
+/// @param dest
+/// @param size
+/// @return
 template <typename T>
 ByteOpResult CopyBytes(const T *src, const T *dest,
                        const size_t &size) noexcept {
@@ -59,9 +68,18 @@ ByteOpResult CopyBytes(const T *src, const T *dest,
   }
 };
 
+/// @brief Convert known-types to raw bytes sequence in big-endian or little-endian format. 
+/// @tparam TVal type of int8_t to int64_t, uint8_t to uint64_t,
+/// double, float, std::string, Utf8Str or bool
+/// @tparam TSeq char or uint8_t
+/// @param val
+/// @param dest
+/// @param dest_size
+/// @param target
+/// @return
 template <typename TVal, typename TSeq>
 ByteOpResult ToBytes(
-    const TVal &val, const TSeq *dest, const size_t &dest_size,
+    const TVal &val, TSeq *dest, const size_t &dest_size,
     EndianessType target = EndianessType::LittleEndian) noexcept {
   static_assert(
       std::is_same<TSeq, char>::value || std::is_same<TSeq, uint8_t>::value,
@@ -86,6 +104,7 @@ ByteOpResult ToBytes(
     }
   } else if constexpr (std::is_same<TVal, Utf8String>::value) {
     // execute method for Utf8Str
+    return ByteOpResult::None;
   } else if constexpr (std::is_same<TVal, bool>::value) {
     ByteOpResult result = ByteOpResult::None;
     if constexpr (std::is_same<TSeq, uint8_t>::value) {
@@ -194,6 +213,12 @@ ByteOpResult ToBytes(
   return ByteOpResult::None;
 };
 
+/// @brief
+/// @tparam T char or uint8_t
+/// @param bytes
+/// @param size
+/// @param result
+/// @return
 template <typename T>
 uint8_t ToUint8(const T *bytes, const size_t &size,
                 ByteOpResult &result) noexcept {
@@ -222,6 +247,13 @@ uint16_t ToUint16(const T *bytes, const size_t &size, ByteOpResult &result,
   }
 };
 
+/// @brief
+/// @tparam T char or uint8_t
+/// @param bytes
+/// @param size
+/// @param result
+/// @param target
+/// @return
 template <typename T>
 uint32_t ToUint32(const T *bytes, const size_t &size, ByteOpResult &result,
                   EndianessType target = EndianessType::LittleEndian) noexcept {
@@ -237,6 +269,13 @@ uint32_t ToUint32(const T *bytes, const size_t &size, ByteOpResult &result,
   }
 };
 
+/// @brief
+/// @tparam T char or uint8_t
+/// @param bytes
+/// @param size
+/// @param result
+/// @param target
+/// @return
 template <typename T>
 uint64_t ToUint64(const T *bytes, const size_t &size, ByteOpResult &result,
                   EndianessType target = EndianessType::LittleEndian) noexcept {
@@ -252,6 +291,12 @@ uint64_t ToUint64(const T *bytes, const size_t &size, ByteOpResult &result,
   }
 };
 
+/// @brief
+/// @tparam T char or uint8_t
+/// @param bytes
+/// @param size
+/// @param result
+/// @return
 template <typename T>
 int8_t ToInt8(const T *bytes, const size_t &size,
               ByteOpResult &result) noexcept {
@@ -265,6 +310,13 @@ int8_t ToInt8(const T *bytes, const size_t &size,
   }
 };
 
+/// @brief
+/// @tparam T char or uint8_t
+/// @param bytes
+/// @param size
+/// @param result
+/// @param target
+/// @return
 template <typename T>
 int16_t ToInt16(const T *bytes, const size_t &size, ByteOpResult &result,
                 EndianessType target = EndianessType::LittleEndian) noexcept {
@@ -272,14 +324,21 @@ int16_t ToInt16(const T *bytes, const size_t &size, ByteOpResult &result,
                 "T can only be char or uint8_t");
 
   if constexpr (std::is_same<T, uint8_t>::value) {
-    return details::u8::DecodeInt16(bytes, size, result),
-           target == EndianessType::BigEndian;
+    return details::u8::DecodeInt16(bytes, size, result,
+                                    target == EndianessType::BigEndian);
   } else {
     return details::ch::DecodeInt16(bytes, size, result,
                                     target == EndianessType::BigEndian);
   }
 };
 
+/// @brief
+/// @tparam T char or uint8_t
+/// @param bytes
+/// @param size
+/// @param result
+/// @param target
+/// @return
 template <typename T>
 int32_t ToInt32(const T *bytes, const size_t &size, ByteOpResult &result,
                 EndianessType target = EndianessType::LittleEndian) noexcept {
@@ -295,6 +354,13 @@ int32_t ToInt32(const T *bytes, const size_t &size, ByteOpResult &result,
   }
 };
 
+/// @brief
+/// @tparam T char or uint8_t
+/// @param bytes
+/// @param size
+/// @param result
+/// @param target
+/// @return
 template <typename T>
 int64_t ToInt64(const T *bytes, const size_t &size, ByteOpResult &result,
                 EndianessType target = EndianessType::LittleEndian) noexcept {
@@ -310,6 +376,13 @@ int64_t ToInt64(const T *bytes, const size_t &size, ByteOpResult &result,
   }
 };
 
+/// @brief
+/// @tparam T char or uint8_t
+/// @param bytes
+/// @param size
+/// @param result
+/// @param target
+/// @return
 template <typename T>
 float ToFloat(const T *bytes, const size_t &size, ByteOpResult &result,
               EndianessType target = EndianessType::LittleEndian) noexcept {
@@ -325,6 +398,13 @@ float ToFloat(const T *bytes, const size_t &size, ByteOpResult &result,
   }
 };
 
+/// @brief
+/// @tparam T char or uint8_t
+/// @param bytes
+/// @param size
+/// @param result
+/// @param target
+/// @return
 template <typename T>
 double ToDouble(const T *bytes, const size_t &size, ByteOpResult &result,
                 EndianessType target = EndianessType::LittleEndian) noexcept {
@@ -339,6 +419,13 @@ double ToDouble(const T *bytes, const size_t &size, ByteOpResult &result,
   }
 };
 
+/// @brief
+/// @tparam T char or uint8_t
+/// @param bytes
+/// @param size
+/// @param result
+/// @param target
+/// @return
 template <typename T>
 std::string ToAsciiString(
     const T *bytes, const size_t &size, ByteOpResult &result,
@@ -352,6 +439,11 @@ std::string ToAsciiString(
   }
 };
 
+/// @brief
+/// @tparam T char or uint8_t
+/// @param bytes
+/// @param size
+/// @return
 template <typename T>
 Utf8String ToUtf8String(const T *bytes, const size_t &size) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
@@ -359,6 +451,112 @@ Utf8String ToUtf8String(const T *bytes, const size_t &size) noexcept {
 
   return std::move(Utf8String::MakeUtf8StringUnchecked(bytes, size));
 };
+
+/// @brief
+/// @tparam T char or uint8_t
+/// @param buffer
+/// @param length
+/// @param err
+/// @return
+template <typename T>
+uint16_t Crc16IBM(const T *buffer, size_t length, ByteOpResult &err) {
+  static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
+                "T can only be char or uint8_t");
+
+  if (!buffer) {
+    err = ByteOpResult::Nullptr;
+    return 0;
+  }
+
+  uint16_t crc = 0xFFFF;
+
+  for (size_t i = 0; i < length; i++) {
+    crc ^= static_cast<uint16_t>(buffer[i]) << 8;
+
+    for (int j = 0; j < 8; j++) {
+      if (crc & 0x8000) {
+        crc = (crc << 1) ^ 0x8005;
+      } else {
+        crc <<= 1;
+      }
+    }
+  }
+
+  err = ByteOpResult::Ok;
+  return crc;
+}
+
+/// @brief
+/// @tparam T char or uint8_t
+/// @param buffer
+/// @param size
+/// @param err
+/// @param target
+/// @return
+template <typename T>
+uint16_t Crc16CCITT(const T *buffer, size_t size, ByteOpResult &err,
+                    EndianessType target) {
+  static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
+                "T can only be char or uint8_t");
+
+  if (!buffer) {
+    err = ByteOpResult::Nullptr;
+    return 0;
+  }
+
+  uint16_t crc = 0xFFFF;
+  uint16_t polynomial = 0x1021;
+  if (target == EndianessType::BigEndian) {
+    for (size_t i = 0; i < size; ++i) {
+      crc ^= static_cast<uint16_t>(buffer[i]) << 8;
+      for (int j = 0; j < 8; ++j) {
+        if (crc & 0x8000) {
+          crc = (crc << 1) ^ polynomial;
+        } else {
+          crc <<= 1;
+        }
+      }
+    }
+  } else {
+    for (size_t i = 0; i < size; ++i) {
+      crc ^= buffer[i];
+      for (int j = 0; j < 8; ++j) {
+        if (crc & 0x0001) {
+          crc = (crc >> 1) ^ polynomial;
+        } else {
+          crc >>= 1;
+        }
+      }
+    }
+  }
+  err = ByteOpResult::Ok;
+  return crc;
+}
+
+/// @brief
+/// @tparam T char or uint8_t
+/// @param hex_str
+/// @return
+template <typename T>
+std::shared_ptr<std::vector<T>> ToBytesFromHexString(
+    const std::string &hex_str) {
+  static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
+                "T can only be char or uint8_t");
+
+  auto v = std::make_shared<std::vector<T>>();
+
+  // Iterate through the hex stream, two characters at a time
+  for (int i = 0; i < hex_str.length(); i += 2) {
+    // Parse the two hexadecimal digits and convert to uint8_t
+    std::string hex_pair = hex_str.substr(i, 2);
+    T decimal_value = static_cast<T>(std::stoi(hex_pair, 0, 16));
+
+    v->emplace_back(decimal_value);
+  }
+
+  // cppcheck-suppress returnStdMoveLocal
+  return std::move(v);
+}
 
 }  // namespace bytes
 }  // namespace nvm
