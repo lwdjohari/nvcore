@@ -27,7 +27,7 @@ TEST_CASE("Enc | float | max to network", "[tobyte][be-le][float-max]") {
     });
   };
 
-  REQUIRE(vectorex::CompareArrays(destp, answer, size) == true);
+  REQUIRE(vectorex::CompareElements(destp, answer, size) == true);
 
   delete[] answer;
   delete[] destp;
@@ -52,7 +52,7 @@ TEST_CASE("Enc | double | max to network", "[tobyte][be-le][double-max]") {
   };
 
   
-  REQUIRE(vectorex::CompareArrays(destp, answer, size) == true);
+  REQUIRE(vectorex::CompareElements(destp, answer, size) == true);
 
   delete[] answer;
   delete[] destp;
@@ -75,7 +75,7 @@ TEST_CASE("Enc | uint64_t | max to network", "[tobyte][be-le][uint64_t-max]") {
     });
   };
 
-  REQUIRE(vectorex::CompareArrays(destp, answer, size) == true);
+  REQUIRE(vectorex::CompareElements(destp, answer, size) == true);
 
   delete[] answer;
   delete[] destp;
@@ -99,7 +99,7 @@ TEST_CASE("Enc | uint32_t | max to network", "[tobyte][be-le][uint32_t-max]") {
     });
   };
 
-  REQUIRE(vectorex::CompareArrays(destp, answer, size) == true);
+  REQUIRE(vectorex::CompareElements(destp, answer, size) == true);
 
   delete[] answer;
   delete[] destp;
