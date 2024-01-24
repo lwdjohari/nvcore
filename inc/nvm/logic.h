@@ -1,0 +1,89 @@
+/*
+ *  Copyright (c) 2020 Linggawasistha Djohari
+ * <linggawasistha.djohari@outlook.com> Licensed to Linggawasistha Djohari under
+ * one or more contributor license agreements. See the NOTICE file distributed
+ * with this work for additional information regarding copyright ownership.
+ *
+ *  Linggawasistha Djohari licenses this file to you under the Apache License,
+ *  Version 2.0 (the "License"); you may not use this file except in
+ *  compliance with the License. You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+#ifndef NVM_CORE_V2_LOGIC_H
+#define NVM_CORE_V2_LOGIC_H
+
+#include <algorithm>
+#include <type_traits>
+
+namespace nvm {
+namespace logic {
+
+/// @brief Get the value is between range supplied. This method use
+/// greater-or-equal comparator & lesser-or-equal comparator. operator.
+/// @tparam T Arithmatic type value
+/// @param value value to test
+/// @param start range start
+/// @param end range end
+/// @return true if value between range.
+template <typename T>
+bool IsBetween(const T &value, const T &start, const T &end) {
+  static_assert(std::is_arithmetic<T>::value,
+                "Only arithmetic types are allowed for IsBetween template.");
+
+  return value >= start && value <= end;
+};
+
+/// @brief Get the range is intersect with other range. This method use
+/// greater-or-equal comparator & lesser-or-equal comparator. operator.
+/// @tparam T Arithmatic type value
+/// @param start1 range start 1
+/// @param end1 range end 1
+/// @param start2 range start 2
+/// @param end2 range end 2
+/// @return true if range intersect one another.
+template <typename T>
+bool IsIntersect(const T &start1, const T &end1, const T &start2,
+                 const T &end2) {
+  static_assert(std::is_arithmetic<T>::value,
+                "Only arithmetic types are allowed for IsIntersect template.");
+
+  return (start1 <= end2) && (end1 >= start2);
+};
+
+/// @brief Get the start & end value that intersect. This method use
+/// greater-or-equal comparator & lesser-or-equal comparator.
+/// @tparam T Arithmatic type value
+/// @param start1 range start 1
+/// @param end1 range end 1
+/// @param start2 range start 2
+/// @param end2 range end 2
+/// @return std::pair<default(),default()> if is not intersect one another.
+template <typename T>
+bool GetIntersect(const T &start1, const T &end1, const T &start2,
+                  const T &end2) {
+  static_assert(std::is_arithmetic<T>::value,
+                "Only arithmetic types are allowed for GetIntersect template.");
+  if ((start1 <= end2) && (end1 >= start2)) {
+    // Check for overlap
+    // Calculate the intersection
+    T intersectStart = std::max(start1, start2);
+    T intersectEnd = std::min(end1, end2);
+    return {intersectStart, intersectEnd};
+  } else {
+    // Return a pair of default-constructed T values to indicate no overlap
+    return {T(), T()};
+  }
+};
+
+}  // namespace logic
+}  // namespace nvm
+
+#endif  // NVM_CORE_V2_LOGIC_H
