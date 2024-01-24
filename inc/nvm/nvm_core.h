@@ -1,5 +1,8 @@
 #include "nvm/macro.h"
 #include "nvm/nullable.h"
+#include "nvm/strings/utility.h"
 #include "nvm/strings/utf8string.h"
 #include "nvm/bytes/byte.h"
 #include "nvm/vector_ex.h"
+#include "nvm/memory.h"
+#include "nvm/logic.h"
