@@ -49,7 +49,7 @@ namespace nvm {
   Type &operator=(Type &&) noexcept = default;
 
 #define NVM_ENUM_CLASS_DISPLAY_TRAIT(E)                                  \
-  std::ostream &operator<<(std::ostream &os, E e) {                      \
+  inline std::ostream &operator<<(std::ostream &os, E e) {               \
     return os << static_cast<typename std::underlying_type<E>::type>(e); \
   }
 
