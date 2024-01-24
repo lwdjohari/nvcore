@@ -57,7 +57,6 @@ T *PtrFwd(T *begin, const T *end, const size_t &n) {
   return begin + n;
 }
 
-
 /// @brief Rewind pointer n-element with no bound checking.
 /// @tparam T
 /// @param ptr pointer of current position
@@ -86,7 +85,6 @@ T *PtrRwd(const T *begin, const T *current, const size_t &n) {
 
   return current - n;
 }
-
 
 /// @brief Initialize default element for fundamental types.\n
 /// @details Fundamentals type are : \n
@@ -135,7 +133,6 @@ bool FillElements(T *el, const T &val, const size_t &size) {
   std::fill_n(el, size, val);
   return true;
 }
-
 
 /// @brief Move memory from std::allocator to std::shared_ptr.
 /// The ownership and the memory lifetime is transfered to std::shared_ptr.
