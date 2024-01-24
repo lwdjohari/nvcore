@@ -13,6 +13,7 @@ set(TEST_SOURCES
     byte_converter_decode_test.cc
     byte_converter_encode_test_big_endian.cc
     byte_converter_encode_test_little_endian.cc
+    logic_test.cc
     # Add more test files if needed
 )
 
