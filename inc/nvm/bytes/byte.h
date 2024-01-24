@@ -49,12 +49,13 @@ ByteOpResult CopyBytes(const T *src, const T *dest,
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
 
+  auto result = ByteOpResult::None;
   if constexpr (std::is_same<T, uint8_t>::value) {
-    details::u8::CopyBytes(src, dest, size);
-    return ByteOpResult::Ok;
+    details::u8::CopyBytes(src, dest, size, result);
+    return result;
   } else {
-    details::ch::CopyBytes(src, dest, size);
-    return ByteOpResult::Ok;
+    details::ch::CopyBytes(src, dest, size, result);
+    return result;
   }
 };
 
