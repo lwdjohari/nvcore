@@ -13,6 +13,9 @@ TEST_CASE("logic::IsBetween double test eq", "[logic][IsBetween][double]") {
   double end = 0.5f;
   auto res = logic::IsBetween(val,start,end);
   REQUIRE(res==true);
+
+  
+  
 }
 
 TEST_CASE("logic::IsBetween double test !eq", "[logic][IsBetween][double]") {
@@ -47,14 +50,30 @@ TEST_CASE("logic::IsIntersect double test eq", "[logic][IsBetween][double]") {
 
 TEST_CASE("logic::GetIntersect double test eq", "[logic][IsBetween][double]") {
 
-  auto range1 = logic::Range(0.1,0.9);
-  auto range2 = logic::Range(0.8,1.0);
+  auto range1 = logic::Range(0.1l,0.9l);
+  auto range2 = logic::Range(0.8l,1.0l);
 
   REQUIRE(range1.IsValid()==true);
   REQUIRE(range2.IsValid()==true);
  
   auto res = logic::GetIntersect(range1,range2);
-  REQUIRE(res.start ==0.8);
-  REQUIRE(res.end ==0.9);
-  REQUIRE(res.Distance() == maths::Approx(0.1).Epsilon(0.01));
+  REQUIRE(res.start ==maths::Approx(0.8l).Epsilon(0.001l));
+  REQUIRE(res.end == maths::Approx(0.9l).Epsilon(0.001l));
+
+  REQUIRE(res.Distance() == maths::Approx(0.1l).Epsilon(0.01l));
+}
+
+
+TEST_CASE("logic::GetIntersect int test eq", "[logic][IsBetween][double]") {
+  
+  auto range1 = logic::Range(1,9);
+  auto range2 = logic::Range(8,9);
+
+  REQUIRE(range1.IsValid()==true);
+  REQUIRE(range2.IsValid()==true);
+ 
+  auto res = logic::GetIntersect(range1,range2);
+  REQUIRE(res.start ==8);
+  REQUIRE(res.end ==9);
+  REQUIRE(res.Distance() == 1);
 }

@@ -160,6 +160,43 @@ Range<T> GetIntersect(const Range<T> &range1, const Range<T> &range2) {
   return GetIntersect(range1.start, range1.end, range2.start, range2.end);
 };
 
+
+/**
+ * @brief A class that represents a flag that can be signaled once.
+ */
+class FlagOnce {
+private:
+  bool signaled = false;
+
+public:
+  /**
+   * @brief Default constructor.
+   */
+  FlagOnce() = default;
+
+  /**
+   * @brief Signals the flag.
+   */
+  void Signal() {
+    signaled = true;
+  }
+
+  /**
+   * @brief Resets the flag.
+   */
+  void Reset() {
+    signaled = false;
+  }
+
+  /**
+   * @brief Checks if the flag has been signaled.
+   * @return true if the flag has been signaled, false otherwise.
+   */
+  bool IsSignaled() const {
+    return signaled;
+  }
+};
+
 }  // namespace logic
 }  // namespace nvm
 
