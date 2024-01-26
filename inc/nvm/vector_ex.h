@@ -124,7 +124,7 @@ std::pair<bool, size_t>  FindInVectorPointerByMethodValue(std::vector<T> &vec,
                                          MemberFunction member_fn) {
   auto it =
       std::find_if(vec.begin(), vec.end(), [value_to_find, member_fn](const T &obj) {
-        return (obj->*member_fn)() == value_to_find;
+        return ((*obj).*member_fn)() == value_to_find;
       });
 
   if (it != vec.end()) {
