@@ -1,3 +1,7 @@
+#pragma once
+
+namespace nvm {
+
 template<typename T>
 class Option {
 private:
@@ -27,3 +31,6 @@ public:
         return *value;
     }
 };
+
+}
+
