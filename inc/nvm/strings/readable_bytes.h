@@ -14,7 +14,7 @@ std::pair<double, std::string> ConvertBytesToReadableSize(T bytes) {
       "Template parameter T must be either size_t or std::streamsize.");
 
   if (bytes == 0) {
-    return { 0, "Bytes" }
+    return { 0, "Bytes" };
   }
 
   static const char* units[] = {"Bytes", "KB", "MB", "GB", "TB"};
