@@ -1,6 +1,8 @@
 #pragma once
 
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <type_traits>
 
@@ -14,7 +16,7 @@ std::pair<double, std::string> ConvertBytesToReadableSize(T bytes) {
       "Template parameter T must be either size_t or std::streamsize.");
 
   if (bytes == 0) {
-    return { 0, "Bytes" };
+    return {0, "Bytes"};
   }
 
   static const char* units[] = {"Bytes", "KB", "MB", "GB", "TB"};
@@ -24,10 +26,21 @@ std::pair<double, std::string> ConvertBytesToReadableSize(T bytes) {
 
   while (size >= 1024) {
     size /= 1024;
+    unit_index++;
   }
 
-  return { size, units[unit_index] };
+  return {size, units[unit_index]};
 }
+
+template <typename T>
+std::string ConvertBytesToReadableSizeString(T bytes, uint8_t precision = 2) {
+  auto result = ConvertBytesToReadableSize(bytes);
+
+  std::ostringstream out;
+  out << std::fixed << std::setprecision(precision) << result.first << " "
+      << result.second;
+  return out.str();
+};
 
 }  // namespace strings
 }  // namespace nvm
