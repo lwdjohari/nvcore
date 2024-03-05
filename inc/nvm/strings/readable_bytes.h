@@ -26,7 +26,7 @@ std::pair<double, std::string> ConvertBytesToReadableSize(T bytes) {
     size /= 1024;
   }
 
-  return { size, units[unit_index] }
+  return { size, units[unit_index] };
 }
 
 }  // namespace strings
