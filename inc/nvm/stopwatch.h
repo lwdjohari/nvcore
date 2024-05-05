@@ -53,7 +53,7 @@ class Stopwatch final {
       throw std::runtime_error("Timer is already stopped.");
     }
     end_ = std::chrono::high_resolution_clock::now();
-    running = false;
+    running_ = false;
   }
 
   // Check if the stopwatch is running
