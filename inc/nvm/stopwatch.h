@@ -60,7 +60,9 @@ class Stopwatch final {
   bool IsRunning() const { return running_; }
 
  private:
-  std::chrono::time_point<std::chrono::high_resolution_clock> start_, end_;
+  std::chrono::time_point<std::chrono::high_resolution_clock> start_;
+  mutable std::chrono::time_point<std::chrono::high_resolution_clock> end_;
+
   bool running_;
 };
 }  // namespace nvm
