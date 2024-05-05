@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2020 Linggawasistha Djohari
+ *  Copyright (c) 2024 Linggawasistha Djohari
  * <linggawasistha.djohari@outlook.com> Licensed to Linggawasistha Djohari under
  * one or more contributor license agreements. See the NOTICE file distributed
  * with this work for additional information regarding copyright ownership.
@@ -22,45 +22,46 @@
 
 #include <chrono>
 
-namespace nvm{
+namespace nvm {
 
-class Stopwatch {
-public:
-    Stopwatch() : start(std::chrono::high_resolution_clock::now()), running(true) {}
+class Stopwatch final {
+ public:
+  Stopwatch()
+      : start_(std::chrono::high_resolution_clock::now()), running_(true) {}
 
-    // Reset the timer
-    void Reset() {
-        start = std::chrono::high_resolution_clock::now();
-        running = true;
+  // Reset the timer
+  void Reset() {
+    start_ = std::chrono::high_resolution_clock::now();
+    running_ = true;
+  }
+
+  // Get the elapsed time in milliseconds
+  double ElapsedMilliseconds() const {
+    if (!running_) {
+      throw std::runtime_error(
+          "Timer is not running. Reset the timer to start it.");
     }
+    end_ = std::chrono::high_resolution_clock::now();
+    auto elapsed =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end_ - start_);
+    return static_cast<double>(elapsed.count());
+  }
 
-    // Get the elapsed time in milliseconds
-    double ElapsedMilliseconds() const {
-        if (!running) {
-            throw std::runtime_error("Timer is not running. Reset the timer to start it.");
-        }
-        auto end = std::chrono::high_resolution_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-        return static_cast<double>(elapsed.count());
+  // Stop the stopwatch
+  void Stop() {
+    if (!running_) {
+      throw std::runtime_error("Timer is already stopped.");
     }
+    end_ = std::chrono::high_resolution_clock::now();
+    running = false;
+  }
 
-    // Stop the stopwatch
-    void Stop() {
-        if (!running) {
-            throw std::runtime_error("Timer is already stopped.");
-        }
-        end = std::chrono::high_resolution_clock::now();
-        running = false;
-    }
+  // Check if the stopwatch is running
+  bool IsRunning() const { return running_; }
 
-    // Check if the stopwatch is running
-    bool IsRunning() const {
-        return running;
-    }
-
-private:
-    std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
-    bool running;
+ private:
+  std::chrono::time_point<std::chrono::high_resolution_clock> start_, end_;
+  bool running_;
 };
-}
+}  // namespace nvm
 #endif
