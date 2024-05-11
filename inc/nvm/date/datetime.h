@@ -52,13 +52,9 @@ inline std::chrono::system_clock::time_point UtcNow() {
 inline std::string ToIso8601String(
     const std::chrono::system_clock::time_point& time, const bool& is_utc) {
   std::time_t t = std::chrono::system_clock::to_time_t(time);
-  std::tm* time_tm;
-  if (is_utc) {
-    time_tm = std::gmtime(&t);
-  } else {
-    time_tm = std::localtime(&t);
-  }
-
+ 
+   std::tm* time_tm = std::localtime(&t);
+  
   std::stringstream ss;
   ss << std::put_time(time_tm, "%FT%T");
   if (is_utc) {
