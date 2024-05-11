@@ -10,7 +10,7 @@
 using namespace nvm;
 
 /** float */
-TEST_CASE("datetime", "[datetime][local]") {
+TEST_CASE("datetime", "[datetime][local-test]") {
   auto local = nvm::date::DateTime();
   auto local_comp = nvm::date::DateTime(local);
   CAPTURE(local.Timepoint());
@@ -26,4 +26,20 @@ TEST_CASE("datetime-utc", "[datetime][utc-test]") {
 
   auto dur = utc.Timepoint() - local.Timepoint();
   REQUIRE(dur.count() != 0);
+}
+
+TEST_CASE("iso-local", "[datetime][local-test]") {
+  auto dt = nvm::date::DateTime();
+  auto iso = dt.ToIso8601();
+  CAPTURE(iso);
+  std::cout << "local:" << iso << std::endl;
+  REQUIRE(!iso.empty() == true);
+}
+
+TEST_CASE("iso-utc", "[datetime][utc-test]") {
+  auto dt = nvm::date::DateTime::UtcNow();
+  auto iso = dt.ToIso8601();
+  CAPTURE(iso);
+  std::cout << "utc:" << iso << std::endl;
+  REQUIRE(!iso.empty() == true);
 }
