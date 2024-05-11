@@ -28,7 +28,7 @@ TEST_CASE("datetime-utc", "[datetime][utc-test]") {
   REQUIRE(dur.count() != 0);
 }
 
-TEST_CASE("iso-local", "[datetime][local-test]") {
+TEST_CASE("datetime-iso-local", "[datetime][local-test]") {
   auto dt = nvm::date::DateTime();
   auto iso = dt.ToIso8601();
   CAPTURE(iso);
@@ -36,10 +36,19 @@ TEST_CASE("iso-local", "[datetime][local-test]") {
   REQUIRE(!iso.empty() == true);
 }
 
-TEST_CASE("iso-utc", "[datetime][utc-test]") {
+TEST_CASE("datetime-iso-utc", "[datetime][utc-test]") {
   auto dt = nvm::date::DateTime::UtcNow();
   auto iso = dt.ToIso8601();
   CAPTURE(iso);
   std::cout << "utc:" << iso << std::endl;
   REQUIRE(!iso.empty() == true);
+}
+
+
+TEST_CASE("datetime-tz-offset", "[datetime][utc-test]") {
+  auto offset = nvm::date::GetSystemTimezoneOffset();
+  
+  CAPTURE(offset);
+  std::cout << "offset:" << offset.count() << std::endl;
+  REQUIRE(offset.count() > 0);
 }

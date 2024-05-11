@@ -29,20 +29,29 @@
 
 namespace nvm::date {
 
+inline std::chrono::seconds GetSystemTimezoneOffset() {
+  time_t gmt, rawtime = time(NULL);
+  struct tm* ptm;
+
+#if !defined(WIN32)
+  struct tm gbuf;
+  ptm = gmtime_r(&rawtime, &gbuf);
+#else
+  ptm = gmtime(&rawtime);
+#endif
+  // Request that mktime() looksup dst in timezone database
+  ptm->tm_isdst = -1;
+  gmt = mktime(ptm);
+
+  auto offset = static_cast<int64_t>(difftime(rawtime, gmt));
+
+  return std::chrono::seconds(offset);
+}
+
 inline std::chrono::system_clock::time_point Now() {
   auto now = std::chrono::system_clock::now();  // Get current time as
                                                 // time_point in UTC
-  std::time_t now_c = std::chrono::system_clock::to_time_t(
-      now);                            // Convert time_point to time_t
-  auto local_tm = *std::localtime(&now_c);  // Convert time_t to tm as local time
- 
- 
-  // std::tm* gmtime = std::gmtime(&now_c);
-  // auto utc_time_t = std::mktime(gmtime);
-
-  // auto now_utc = std::chrono::system_clock::from_time_t(utc_time_t);
-
-  return now + std::chrono::seconds(local_tm.tm_gmtoff);
+  return now + GetSystemTimezoneOffset();
 }
 
 inline std::chrono::system_clock::time_point UtcNow() {
@@ -52,9 +61,9 @@ inline std::chrono::system_clock::time_point UtcNow() {
 inline std::string ToIso8601String(
     const std::chrono::system_clock::time_point& time, const bool& is_utc) {
   std::time_t t = std::chrono::system_clock::to_time_t(time);
- 
-   std::tm* time_tm = std::gmtime(&t);
-  
+
+  std::tm* time_tm = std::gmtime(&t);
+
   std::stringstream ss;
   ss << std::put_time(time_tm, "%FT%T");
   if (is_utc) {
