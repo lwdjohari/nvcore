@@ -67,19 +67,64 @@ endif()
 
 # Add dependencies source code
 
+option( USE_SYSTEM_TZ_DB "Use the operating system's timezone database" OFF )
+option( MANUAL_TZ_DB "User will set TZ DB manually by invoking set_install in their code" OFF )
+option( USE_TZ_DB_IN_DOT "Save the timezone database in the current folder" OFF )
+option( BUILD_SHARED_LIBS  "Build a shared version of library" OFF )
+option( ENABLE_DATE_TESTING "Enable unit tests" OFF )
+option( DISABLE_STRING_VIEW "Disable string view" OFF )
+option( COMPILE_WITH_C_LOCALE "define ONLY_C_LOCALE=1" OFF )
+option( BUILD_TZ_LIB "build/install of TZ library" OFF )
+
+
+
+set( USE_SYSTEM_TZ_DB  ON )
+set( MANUAL_TZ_DB OFF )
+set( USE_TZ_DB_IN_DOT  OFF )
+set( BUILD_SHARED_LIBS  OFF )
+set( ENABLE_DATE_TESTING  OFF )
+set( DISABLE_STRING_VIEW  ON )
+set( COMPILE_WITH_C_LOCALE  OFF )
+set( BUILD_TZ_LIB  OFF )
+
+# add_subdirectory(deps/hhdate build-hhdate)
+
+# SET(USE_SYSTEM_TZ_DB ON)
+# SET(DISABLE_STRING_VIEW ON)
+# SET(BUILD_TZ_LIB OFF)
+
 # Main headers and sources
 file(GLOB_RECURSE SOURCES_NVM_CORE CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/inc/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.s
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/hhdate/include/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/hhdate/src/*.cpp
 )
 
+
+
 add_library(${PROJECT_NAME} STATIC ${SOURCES_NVM_CORE} )
-target_link_libraries(${PROJECT_NAME}  utf8cpp )
+target_link_libraries(${PROJECT_NAME}  
+    utf8cpp )
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+
+if( USE_SYSTEM_TZ_DB OR MANUAL_TZ_DB )
+    target_compile_definitions( ${PROJECT_NAME}  PRIVATE AUTO_DOWNLOAD=0 HAS_REMOTE_API=0 )
+else()
+    target_compile_definitions( ${PROJECT_NAME}  AUTO_DOWNLOAD=1 HAS_REMOTE_API=1 )
+endif()
+
+if ( USE_SYSTEM_TZ_DB AND NOT WIN32 AND NOT MANUAL_TZ_DB )
+    target_compile_definitions( ${PROJECT_NAME} PRIVATE INSTALL=. PUBLIC USE_OS_TZDB=1 )
+else()
+    target_compile_definitions( ${PROJECT_NAME} PUBLIC USE_OS_TZDB=0 )
+endif()
+
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         inc/
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/hhdate/include/
 )
 
 
