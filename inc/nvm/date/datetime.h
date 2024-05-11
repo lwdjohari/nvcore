@@ -30,13 +30,36 @@
 namespace nvm::date {
 
 inline std::chrono::system_clock::time_point Now() {
-  // Get current time as time_t object
-  std::time_t t = std::time(nullptr);
-  // Convert to local time
-  std::tm* local_time = std::localtime(&t);
-  // Convert back to time_t and then to time_point
-  std::time_t local_time_t = std::mktime(local_time);
-  return std::chrono::system_clock::from_time_t(local_time_t);
+     // Get current time as time_point directly in UTC
+    auto now_utc = std::chrono::system_clock::now();
+    // Convert to time_t
+    std::time_t now_c = std::chrono::system_clock::to_time_t(now_utc);
+    // Convert to local time using the system's timezone data
+    std::tm* local_tm = std::localtime(&now_c);
+    // Convert back to time_t as local time
+    std::time_t local_time_t = std::mktime(local_tm);
+    // Convert back to time_point
+    return std::chrono::system_clock::from_time_t(local_time_t);
+
+
+    // // Get current time as time_point in UTC
+    // auto now_utc = std::chrono::system_clock::now();
+    // // Convert time_point to time_t
+    // std::time_t now_c = std::chrono::system_clock::to_time_t(now_utc);
+    // // Get the local time as tm struct
+    // std::tm* local_tm = std::localtime(&now_c);
+    // // Get the UTC time as tm struct
+    // std::tm* utc_tm = std::gmtime(&now_c);
+
+    // // Convert both to mktime to get time_t and calculate the difference
+    // auto local_time_t = std::mktime(local_tm);
+    // auto utc_time_t = std::mktime(utc_tm);
+    
+    // // Calculate the offset in seconds
+    // auto offset = std::difftime(local_time_t, utc_time_t);
+
+    // // Adjust the UTC time_point by the offset to simulate the local time
+    // return now_utc + std::chrono::seconds(static_cast<int>(offset));
 }
 
 inline std::chrono::system_clock::time_point UtcNow() {
