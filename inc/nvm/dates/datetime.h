@@ -110,7 +110,7 @@ namespace nvm::dates {
 
 /// @brief Get Timezone Info
 /// @param tz_name IANA Timezone name
-/// @return 
+/// @return
 [[nodiscard]] inline const date::time_zone* GetTimezone(
     const std::string& tz_name) {
   auto z = date::locate_zone(tz_name);
@@ -409,7 +409,8 @@ class DateTime {
   /// @return
   template <typename T = std::chrono::seconds>
   [[nodiscard]] DateTime Add(const T& duration) {
-    return *this + duration;
+    return *this +
+           std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
   }
 
   /// @brief Subtract current DateTime by duration.
@@ -418,7 +419,8 @@ class DateTime {
   /// @return
   template <typename T = std::chrono::seconds>
   [[nodiscard]] DateTime Subtract(const T& duration) {
-    return *this - duration;
+    return *this -
+           std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
   }
 
   /// @brief Get duration span from current datetime and supplied datetime.
@@ -481,9 +483,9 @@ class DateTime {
   }
 
   /// @brief Format datetime to string based on pattern format
-  /// @param format 
-  /// @return 
-  std::string ToString(const std::string& format){
+  /// @param format
+  /// @return
+  std::string ToString(const std::string& format) {
     return date::format(format, *time_);
   }
 
