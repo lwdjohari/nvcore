@@ -517,21 +517,21 @@ inline std::optional<std::chrono::nanoseconds> CalculateDurationBetween(
 }
 
 // Overloading the + operator to add duration to DateTime
-DateTime operator+(const DateTime& dt,
+inline DateTime operator+(const DateTime& dt,
                    const std::chrono::duration<int64_t>& duration) {
   return CalculateDurationSpan(dt, duration,
                                DateTimeCalculateSpanType::DurationAdd);
 }
 
 // Overloading the - operator to subtract duration from DateTime
-DateTime operator-(const DateTime& dt,
+inline DateTime operator-(const DateTime& dt,
                    const std::chrono::duration<int64_t>& duration) {
   return CalculateDurationSpan(dt, duration,
                                DateTimeCalculateSpanType::DurationSubtract);
 }
 
 // Overloading the - operator to subtract DateTime and DateTime object
-std::optional<std::chrono::nanoseconds> operator-(const DateTime& lv,
+inline std::optional<std::chrono::nanoseconds> operator-(const DateTime& lv,
                                                   const DateTime& rv) {
   return CalculateDurationBetween(lv, rv);
 }
