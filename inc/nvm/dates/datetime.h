@@ -179,7 +179,7 @@ struct DateTimePart {
         nanosecond(nanosecond) {}
 };
 
-[[nodiscard]] DateTimePart GetDateTimePart(
+[[nodiscard]] inline DateTimePart GetDateTimePart(
     const date::zoned_time<std::chrono::nanoseconds, const date::time_zone*>&
         time) {
   // Get the local time_point and time_zone info
@@ -483,9 +483,9 @@ enum class DateTimeCalculateSpanType : uint8_t {
 };
 
 template <typename TDuration>
-DateTime CalculateDurationSpan(const DateTime& source,
-                               std::chrono::duration<TDuration> duration,
-                               DateTimeCalculateSpanType calc_type) {
+[[nodiscard]] inline DateTime CalculateDurationSpan(
+    const DateTime& source, std::chrono::duration<TDuration> duration,
+    DateTimeCalculateSpanType calc_type) {
   // calculate from local time not from sys_time().
   // sys_time() as time_point is platform dependent
   // and could create UB
@@ -518,21 +518,21 @@ inline std::optional<std::chrono::nanoseconds> CalculateDurationBetween(
 
 // Overloading the + operator to add duration to DateTime
 inline DateTime operator+(const DateTime& dt,
-                   const std::chrono::duration<int64_t>& duration) {
+                          const std::chrono::duration<int64_t>& duration) {
   return CalculateDurationSpan(dt, duration,
                                DateTimeCalculateSpanType::DurationAdd);
 }
 
 // Overloading the - operator to subtract duration from DateTime
 inline DateTime operator-(const DateTime& dt,
-                   const std::chrono::duration<int64_t>& duration) {
+                          const std::chrono::duration<int64_t>& duration) {
   return CalculateDurationSpan(dt, duration,
                                DateTimeCalculateSpanType::DurationSubtract);
 }
 
 // Overloading the - operator to subtract DateTime and DateTime object
 inline std::optional<std::chrono::nanoseconds> operator-(const DateTime& lv,
-                                                  const DateTime& rv) {
+                                                         const DateTime& rv) {
   return CalculateDurationBetween(lv, rv);
 }
 
