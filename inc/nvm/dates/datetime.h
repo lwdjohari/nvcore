@@ -108,6 +108,9 @@ namespace nvm::dates {
                   date::current_zone()->name());
 }
 
+/// @brief Get Timezone Info
+/// @param tz_name IANA Timezone name
+/// @return 
 [[nodiscard]] inline const date::time_zone* GetTimezone(
     const std::string& tz_name) {
   auto z = date::locate_zone(tz_name);
@@ -240,7 +243,7 @@ class DateTime {
       next_year = part_->year + 1;
     } else {
       next_month = part_->month + 1;
-      next_year = part_->year ;
+      next_year = part_->year;
     }
 
     return std::make_pair(next_month, next_year);
@@ -457,8 +460,7 @@ class DateTime {
 
     auto zoned_first_day_start =
         DateTime(static_cast<int32_t>(ymd.year()),
-                 static_cast<uint8_t>(unsigned(ymd.month())),
-                 1,
+                 static_cast<uint8_t>(unsigned(ymd.month())), 1,
                  time_->get_time_zone()->name());
 
     return DateTime(std::move(zoned_first_day_start));
@@ -476,6 +478,13 @@ class DateTime {
 
     return first_day_of_next_month -
            std::chrono::duration_cast<std::chrono::nanoseconds>(seconds);
+  }
+
+  /// @brief Format datetime to string based on pattern format
+  /// @param format 
+  /// @return 
+  std::string ToString(const std::string& format){
+    return date::format(format, *time_);
   }
 
   bool operator==(const DateTime& other) const {

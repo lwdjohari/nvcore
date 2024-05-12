@@ -163,3 +163,23 @@ TEST_CASE("datetime-first-and-end-day-of-month", "[datetime][local-test]") {
   REQUIRE(first_day_of_month == ans_first);
   REQUIRE(last_day_of_month == ans_last);
 }
+
+TEST_CASE("datetime-format", "[datetime][local-test]") {
+  using DateTime = dates::DateTime;
+
+  auto jkt_time = DateTime(2022, 7, 10, 13, 0, 0, 0, "Asia/Jakarta");
+
+  std::string format = "%d-%b-%y";
+  auto res = jkt_time.ToString(format);
+
+  CAPTURE(jkt_time);
+
+  std::cout << "TARGET" << std::endl;
+  std::cout << "FORMAT   : " << format << std::endl;
+  std::cout << "DATE     : " << jkt_time << std::endl;
+
+  std::cout << "RESULT" << std::endl;
+  std::cout << res << std::endl;
+
+  REQUIRE(res == "10-Jul-22");
+}
