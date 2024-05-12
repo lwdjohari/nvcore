@@ -57,17 +57,15 @@ TEST_CASE("datetime-test-add-duration", "[datetime][local-test]") {
   auto seconds = 7200;
   std::chrono::seconds duration(seconds);
   auto now = nvm::dates::DateTime();
-  
+
   // Display the current local time
-  std::cout << "Current local time: \n" << *now.TzTime()
-            << std::endl;
+  std::cout << "Current local time: \n" << *now.TzTime() << std::endl;
 
   auto next = now + duration;
 
   // Display the local time after adding the duration
-  std::cout << "Local time after adding " << seconds
-            << " seconds: \n" << *next.TzTime()
-            << std::endl;
+  std::cout << "Local time after adding " << seconds << " seconds: \n"
+            << *next.TzTime() << std::endl;
 
   REQUIRE(next.TzTime() != nullptr);
 }
@@ -76,28 +74,42 @@ TEST_CASE("datetime-test-subtract-duration", "[datetime][local-test]") {
   auto seconds = 7200;
   std::chrono::seconds duration(seconds);
   auto now = nvm::dates::DateTime();
-  
+
   // Display the current local time
-  std::cout << "Current local time: \n" << *now.TzTime()
-            << std::endl;
+  std::cout << "Current local time: \n" << *now.TzTime() << std::endl;
 
   auto next = now - duration;
 
   // Display the local time after subtract the duration
-  std::cout << "Local time after subtract " << seconds
-            << " seconds: \n" <<  *next.TzTime()
-            << std::endl;
+  std::cout << "Local time after subtract " << seconds << " seconds: \n"
+            << *next.TzTime() << std::endl;
 
   REQUIRE(next.TzTime() != nullptr);
 }
 
-// TEST_CASE("datetime-iso-utc", "[datetime][utc-test]") {
-//   auto dt = nvm::dates::DateTime::UtcNow();
-//   auto iso = dt.ToIso8601();
-//   CAPTURE(iso);
-//   std::cout << "utc:" << iso << std::endl;
-//   REQUIRE(!iso.empty() == true);
-// }
+TEST_CASE("datetime-date-subtract", "[datetime][local-test]") {
+  auto seconds = 7200;
+  std::chrono::seconds duration(seconds);
+  auto now = nvm::dates::DateTime();
+
+  // Display the current local time
+  std::cout << "Current local time: \n" << *now.TzTime() << std::endl;
+
+  auto next = now + duration;
+
+  // Display the local time after subtract the duration
+  std::cout << "Local time after adding " << seconds << " seconds: \n"
+            << *next.TzTime() << std::endl;
+
+  auto result = next - now;
+
+  std::chrono::seconds diff =
+      std::chrono::duration_cast<std::chrono::seconds>(result.value());
+
+  std::cout << "Diff in second: \n" << diff.count() << std::endl;
+
+  REQUIRE(duration == diff);
+}
 
 // TEST_CASE("datetime-tz-offset", "[datetime][utc-test]") {
 //   auto offset = nvm::dates::GetSystemTimezoneOffset();
