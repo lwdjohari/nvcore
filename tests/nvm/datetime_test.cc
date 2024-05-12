@@ -183,3 +183,40 @@ TEST_CASE("datetime-format", "[datetime][local-test]") {
 
   REQUIRE(res == "10-Jul-22");
 }
+
+TEST_CASE("datetime-subtract-100-years-seconds", "[datetime][local-test]") {
+  using DateTime = dates::DateTime;
+  using namespace std::chrono;
+
+  auto jkt_time = DateTime(2022, 7, 10, 0, 0, 0, 0, "Asia/Jakarta");
+  auto ans = DateTime(1922, 07, 11, 0, 0, 0, 0, "Asia/Jakarta");
+
+  // Define duration types with int64_t to prevent overflow
+  using seconds = duration<int64_t>;
+
+  constexpr int64_t seconds_per_minute = 60;
+  constexpr int64_t minutes_per_hour = 60;
+  constexpr int64_t hours_per_day = 24;
+  constexpr int64_t days_per_normal_year = 365;
+  constexpr int64_t days_per_leap_year = 366;
+  constexpr int64_t normal_years = 76;
+  constexpr int64_t leap_years = 24;
+
+  // Calculate total seconds in normal and leap years
+  auto total_seconds =
+      seconds(hours_per_day * minutes_per_hour * seconds_per_minute) *
+      (days_per_normal_year * normal_years + days_per_leap_year * leap_years);
+
+  auto res = jkt_time - dates::ToNanosecondDuration(total_seconds);
+  CAPTURE(jkt_time);
+  CAPTURE(ans);
+
+  std::cout << "TARGET" << std::endl;
+  std::cout << "START   : " << jkt_time << std::endl;
+  std::cout << "END     : " << ans << std::endl;
+
+  std::cout << "RESULT" << std::endl;
+  std::cout << res << std::endl;
+
+  REQUIRE(res == ans);
+}
