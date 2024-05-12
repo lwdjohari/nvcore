@@ -30,7 +30,6 @@ TEST_CASE("datetime", "[datetime][local-test]") {
 }
 
 TEST_CASE("datetime-print", "[datetime][local-test]") {
-  
   auto local_time = nvm::dates::DateTime();
 
   // Print the local time
@@ -40,7 +39,6 @@ TEST_CASE("datetime-print", "[datetime][local-test]") {
 }
 
 TEST_CASE("datetime-utc-print", "[datetime][utc-test]") {
- 
   auto local_time = nvm::dates::DateTime("Etc/UTC");
 
   // Print the local time
@@ -107,3 +105,28 @@ TEST_CASE("datetime-date-subtract", "[datetime][local-test]") {
   REQUIRE(duration == diff);
 }
 
+TEST_CASE("datetime-timezone-convert", "[datetime][local-test]") {
+  auto jkt_time = dates::DateTime(2022, 7, 10, 13, 00, 00, 00, "Asia/Jakarta");
+  auto answer_utc = dates::DateTime(2022, 7, 10, 06, 00, 00, 00, "Etc/UTC");
+  auto answer_new_york =
+      dates::DateTime(2022, 7, 10, 02, 00, 00, 00, "America/New_York");
+
+  auto res_utc = jkt_time.ToTimezone("Etc/UTC");
+  auto res_new_york = jkt_time.ToTimezone("America/New_York");
+
+  CAPTURE(jkt_time);
+  CAPTURE(res_utc);
+  CAPTURE(res_new_york);
+
+  std::cout << "TARGET" << std::endl;
+  std::cout << "Jakarta : " << jkt_time << std::endl;
+  std::cout << "UTC     : " << answer_utc << std::endl;
+  std::cout << "New York: " << answer_new_york << std::endl;
+
+  std::cout << "RESULT" << std::endl;
+  std::cout << "UTC     : " << res_utc << std::endl;
+  std::cout << "New York: " << res_new_york << std::endl;
+
+  REQUIRE(res_new_york == answer_new_york);
+  REQUIRE(res_utc == answer_utc);
+}

@@ -365,48 +365,56 @@ class DateTime {
     return std::string(date::current_zone()->name());
   }
 
-  // DateTime ToLocalTime() const { return DateTime::ToLocalTime(*this); }
+  DateTime ToUtc() const {
+    if (time_->get_time_zone()->name() == "Etc/UTC") {
+      return DateTime(*this);
+    }
 
-  // DateTime ToUtc() const { return DateTime::ToUtc(*this); }
+    return DateTime(date::zoned_time("Etc/UTC",*time_ ));
+  }
 
-  // std::chrono::milliseconds GetDuration(const DateTime& time) const {
-  //   return *this - time;
-  // }
+  DateTime ToTimezone(const std::string& tz_name) const {
+    if (time_->get_time_zone()->name() == tz_name) {
+      return DateTime(*this);
+    }
+
+    return DateTime(date::zoned_time(tz_name,*time_ ));
+  }
 
   bool operator==(const DateTime& other) const {
     if (!other.time_ || !time_) return false;
 
-    return time_ == other.time_;
+    return time_->get_sys_time() == other.time_->get_sys_time();
   }
 
   bool operator!=(const DateTime& other) const {
     if (!other.time_ || !time_) return false;
 
-    return time_ != other.time_;
+    return time_->get_sys_time() != other.time_->get_sys_time();
   }
 
   bool operator<(const DateTime& other) const {
     if (!other.time_ || !time_) return false;
 
-    return time_ < other.time_;
+    return time_->get_sys_time() < other.time_->get_sys_time();
   }
 
   bool operator<=(const DateTime& other) const {
     if (!other.time_ || !time_) return false;
 
-    return time_ <= other.time_;
+    return time_->get_sys_time() <= other.time_->get_sys_time();
   }
 
   bool operator>(const DateTime& other) const {
     if (!other.time_ || !time_) return false;
 
-    return time_ > other.time_;
+    return time_->get_sys_time() > other.time_->get_sys_time();
   }
 
   bool operator>=(const DateTime& other) const {
     if (!other.time_ || !time_) return false;
 
-    return time_ >= other.time_;
+    return time_->get_sys_time() >= other.time_->get_sys_time();
   }
 
   friend DateTime operator+(const DateTime& dt,
@@ -422,7 +430,7 @@ class DateTime {
   }
 
   friend std::ostream& operator<<(std::ostream& os, const DateTime& dt) {
-    os << static_cast<std::string>(dt);  
+    os << static_cast<std::string>(dt);
     return os;
   }
 };
@@ -454,7 +462,7 @@ DateTime CalculateDurationSpan(const DateTime& source,
   return DateTime(std::move(zoned_time_after_duration));
 }
 
-std::optional<std::chrono::nanoseconds> CalculateDurationBetween(
+inline std::optional<std::chrono::nanoseconds> CalculateDurationBetween(
     const DateTime& dt1, const DateTime& dt2) {
   // Ensure both times are in the same time zone for accurate comparison
   if (dt1.TzTime()->get_time_zone() != dt2.TzTime()->get_time_zone()) {
