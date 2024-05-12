@@ -30,27 +30,23 @@ TEST_CASE("datetime", "[datetime][local-test]") {
 }
 
 TEST_CASE("datetime-print", "[datetime][local-test]") {
-  auto now = std::chrono::system_clock::now();
-
-  // Convert it to local time using the HH Date library
-  auto local_time = date::make_zoned(date::current_zone(), now);
+  
+  auto local_time = nvm::dates::DateTime();
 
   // Print the local time
   std::cout << "Current local time: " << local_time << '\n';
 
-  REQUIRE(local_time.get_time_zone() != nullptr);
+  REQUIRE(local_time.TzTime() != nullptr);
 }
 
 TEST_CASE("datetime-utc-print", "[datetime][utc-test]") {
-  auto now = std::chrono::system_clock::now();
-
-  // Convert it to local time using the HH Date library
-  auto local_time = date::make_zoned(date::locate_zone("Etc/UTC"), now);
+ 
+  auto local_time = nvm::dates::DateTime("Etc/UTC");
 
   // Print the local time
   std::cout << "Current UTC time: " << local_time << '\n';
 
-  REQUIRE(local_time.get_time_zone() != nullptr);
+  REQUIRE(local_time.TzTime() != nullptr);
 }
 
 TEST_CASE("datetime-test-add-duration", "[datetime][local-test]") {
@@ -59,13 +55,13 @@ TEST_CASE("datetime-test-add-duration", "[datetime][local-test]") {
   auto now = nvm::dates::DateTime();
 
   // Display the current local time
-  std::cout << "Current local time: \n" << *now.TzTime() << std::endl;
+  std::cout << "Current local time: \n" << now << std::endl;
 
   auto next = now + duration;
 
   // Display the local time after adding the duration
   std::cout << "Local time after adding " << seconds << " seconds: \n"
-            << *next.TzTime() << std::endl;
+            << next << std::endl;
 
   REQUIRE(next.TzTime() != nullptr);
 }
@@ -76,13 +72,13 @@ TEST_CASE("datetime-test-subtract-duration", "[datetime][local-test]") {
   auto now = nvm::dates::DateTime();
 
   // Display the current local time
-  std::cout << "Current local time: \n" << *now.TzTime() << std::endl;
+  std::cout << "Current local time: \n" << now << std::endl;
 
   auto next = now - duration;
 
   // Display the local time after subtract the duration
   std::cout << "Local time after subtract " << seconds << " seconds: \n"
-            << *next.TzTime() << std::endl;
+            << next << std::endl;
 
   REQUIRE(next.TzTime() != nullptr);
 }
@@ -93,13 +89,13 @@ TEST_CASE("datetime-date-subtract", "[datetime][local-test]") {
   auto now = nvm::dates::DateTime();
 
   // Display the current local time
-  std::cout << "Current local time: \n" << *now.TzTime() << std::endl;
+  std::cout << "Current local time: \n" << now << std::endl;
 
   auto next = now + duration;
 
   // Display the local time after subtract the duration
   std::cout << "Local time after adding " << seconds << " seconds: \n"
-            << *next.TzTime() << std::endl;
+            << next << std::endl;
 
   auto result = next - now;
 
@@ -111,10 +107,3 @@ TEST_CASE("datetime-date-subtract", "[datetime][local-test]") {
   REQUIRE(duration == diff);
 }
 
-// TEST_CASE("datetime-tz-offset", "[datetime][utc-test]") {
-//   auto offset = nvm::dates::GetSystemTimezoneOffset();
-
-//   CAPTURE(offset);
-//   std::cout << "offset:" << offset.count() << std::endl;
-//   REQUIRE(offset.count() > 0);
-// }

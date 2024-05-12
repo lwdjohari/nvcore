@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <ctime>
 #include <optional>
+#include <ostream>
 #include <stdexcept>
 
 #include "date/tz.h"
@@ -115,12 +116,6 @@ inline auto UtcNow() {
   return ToTzTime("Etc/Utc", std::chrono::system_clock::now());
 }
 
-inline std::string ToIso8601String(
-    const date::zoned_time<std::chrono::nanoseconds, const date::time_zone*>&
-        tz_time) {
-  return date::format("%FT%TZ", tz_time.get_local_time());
-}
-
 struct DateTimePart {
   // Year as a signed integer (to handle BCE years if ever necessary)
   int32_t year;
@@ -138,6 +133,8 @@ struct DateTimePart {
   // effect
   bool is_daylight_saving;
   // UTC offset in seconds
+  // Indicates whether the year is a leap year
+  bool is_leap_year;
   std::chrono::seconds offset;
   // Milliseconds part of the second (0-999)
   uint16_t millisecond;
@@ -152,6 +149,7 @@ struct DateTimePart {
         minute(),
         second(),
         is_daylight_saving(),
+        is_leap_year(),
         offset(),
         millisecond(),
         nanosecond() {}
@@ -159,7 +157,7 @@ struct DateTimePart {
   explicit DateTimePart(int32_t year, uint8_t month, uint8_t day, uint8_t hour,
                         uint8_t minute, uint8_t second, uint16_t millisecond,
                         uint32_t nanosecond, const std::chrono::seconds& offset,
-                        bool is_daylight_saving)
+                        bool is_daylight_saving, bool is_leap_year)
       : year(year),
         month(month),
         day(day),
@@ -167,6 +165,7 @@ struct DateTimePart {
         minute(minute),
         second(second),
         is_daylight_saving(is_daylight_saving),
+        is_leap_year(is_leap_year),
         offset(std::chrono::seconds(offset)),
         millisecond(millisecond),
         nanosecond(nanosecond) {}
@@ -175,9 +174,38 @@ struct DateTimePart {
 DateTimePart GetDateTimePart(
     const date::zoned_time<std::chrono::nanoseconds, const date::time_zone*>&
         time) {
-  return DateTimePart();
+  // Get the local time_point and time_zone info
+  auto local_time = time.get_local_time();
+  auto tz_info = time.get_time_zone()->get_info(local_time);
+
+  // Date components
+  auto dp = date::floor<date::days>(local_time);
+  auto time_of_day =
+      date::make_time(local_time - dp);  // date::time_of_day<nanoseconds>
+  auto ymd = date::year_month_day{dp};
+
+  DateTimePart part;
+  part.year = static_cast<int32_t>(int(ymd.year()));
+  part.month = static_cast<uint8_t>(unsigned(ymd.month()));
+  part.day = static_cast<uint8_t>(unsigned(ymd.day()));
+  part.hour = static_cast<uint8_t>(time_of_day.hours().count());
+  part.minute = static_cast<uint8_t>(time_of_day.minutes().count());
+  part.second = static_cast<uint8_t>(time_of_day.seconds().count());
+  part.millisecond =
+      static_cast<uint16_t>(time_of_day.subseconds().count() /
+                            1'000'000);  // Convert nanoseconds to milliseconds
+  part.nanosecond = static_cast<uint32_t>(time_of_day.subseconds().count());
+
+  part.offset = tz_info.first.offset;
+  part.is_daylight_saving = tz_info.first.save != std::chrono::seconds(0);
+
+  part.is_leap_year = ymd.year().is_leap();
+
+  return part;
 }
 
+/// @brief Class for handling datetime with or without timezone, the underlying
+/// implementations are rely to the Howard Hinnant date library.
 class DateTime {
  private:
   std::shared_ptr<
@@ -321,7 +349,7 @@ class DateTime {
 
   /// @brief Get Iso8601 datetime string representation
   /// @return
-  std::string ToIso8601() const { return ToIso8601String(*time_); }
+  std::string ToIso8601() const { return date::format("%FT%T%z", *time_); }
 
   /// @brief Create DateTime object with host current timezone and current time.
   /// @return
@@ -389,6 +417,14 @@ class DateTime {
   friend std::optional<std::chrono::nanoseconds> operator-(const DateTime& rv,
                                                            const DateTime& lv);
 
+  explicit operator std::string() const {
+    return date::format("%FT%T%z", *time_);
+  }
+
+  friend std::ostream& operator<<(std::ostream& os, const DateTime& dt) {
+    os << static_cast<std::string>(dt);  
+    return os;
+  }
 };
 
 enum class DateTimeCalculateSpanType : uint8_t {
