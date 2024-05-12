@@ -55,7 +55,7 @@ TEST_CASE("datetime-test-add-duration", "[datetime][local-test]") {
   // Display the current local time
   std::cout << "Current local time: \n" << now << std::endl;
 
-  auto next = now + duration;
+  auto next = now + dates::ToNanosecondDuration(duration);
 
   // Display the local time after adding the duration
   std::cout << "Local time after adding " << seconds << " seconds: \n"
@@ -72,7 +72,7 @@ TEST_CASE("datetime-test-subtract-duration", "[datetime][local-test]") {
   // Display the current local time
   std::cout << "Current local time: \n" << now << std::endl;
 
-  auto next = now - duration;
+  auto next = now - dates::ToNanosecondDuration(duration);
 
   // Display the local time after subtract the duration
   std::cout << "Local time after subtract " << seconds << " seconds: \n"
@@ -89,7 +89,7 @@ TEST_CASE("datetime-date-subtract", "[datetime][local-test]") {
   // Display the current local time
   std::cout << "Current local time: \n" << now << std::endl;
 
-  auto next = now + duration;
+  auto next = now + dates::ToNanosecondDuration(duration);
 
   // Display the local time after subtract the duration
   std::cout << "Local time after adding " << seconds << " seconds: \n"
@@ -133,4 +133,33 @@ TEST_CASE("datetime-timezone-convert", "[datetime][local-test]") {
 
   REQUIRE(res_new_york == answer_new_york);
   REQUIRE(res_utc == answer_utc);
+}
+
+TEST_CASE("datetime-first-and-end-day-of-month", "[datetime][local-test]") {
+  using DateTime = dates::DateTime;
+
+  auto jkt_time = DateTime(2022, 7, 10, 13, 0, 0, 0, "Asia/Jakarta");
+  auto ans_first = DateTime(2022, 7, 1, 0, 0, 0, 0, "Asia/Jakarta");
+  auto ans_last = DateTime(2022, 7, 31, 23, 59, 59, 0, "Asia/Jakarta");
+
+  auto first_day_of_month = jkt_time.GetStartOfMonth();
+  auto last_day_of_month = jkt_time.GetEndOfMonth();
+
+  CAPTURE(jkt_time);
+  CAPTURE(ans_first);
+  CAPTURE(ans_last);
+  CAPTURE(first_day_of_month);
+  CAPTURE(last_day_of_month);
+
+  std::cout << "TARGET" << std::endl;
+  std::cout << "DATE    : " << jkt_time << std::endl;
+  std::cout << "FIRST   : " << ans_first << std::endl;
+  std::cout << "LAST    : " << ans_last << std::endl;
+
+  std::cout << "RESULT" << std::endl;
+  std::cout << "FIRST   : " << first_day_of_month << std::endl;
+  std::cout << "LAST    : " << last_day_of_month << std::endl;
+
+  REQUIRE(first_day_of_month == ans_first);
+  REQUIRE(last_day_of_month == ans_last);
 }

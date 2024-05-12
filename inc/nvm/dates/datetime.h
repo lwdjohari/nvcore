@@ -26,6 +26,7 @@
 #include <optional>
 #include <ostream>
 #include <stdexcept>
+#include <utility>
 
 #include "date/tz.h"
 
@@ -179,6 +180,15 @@ struct DateTimePart {
         nanosecond(nanosecond) {}
 };
 
+/// @brief Safe cast chrono::duration to chrono::nanoseconds
+/// @tparam T std::chrono duration
+/// @param value
+template <typename T = std::chrono::seconds>
+[[nodiscard]] inline std::chrono::nanoseconds ToNanosecondDuration(
+    const T& value) {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(value);
+}
+
 [[nodiscard]] inline DateTimePart GetDateTimePart(
     const date::zoned_time<std::chrono::nanoseconds, const date::time_zone*>&
         time) {
@@ -220,6 +230,21 @@ class DateTime {
       date::zoned_time<std::chrono::nanoseconds, const date::time_zone*>>
       time_;
   std::shared_ptr<DateTimePart> part_;
+
+  std::pair<uint8_t, int32_t> DetermineNextMonth() const {
+    uint8_t next_month;
+    int32_t next_year;
+
+    if (part_->month >= 12) {
+      next_month = 1;
+      next_year = part_->year + 1;
+    } else {
+      next_month = part_->month + 1;
+      next_year = part_->year ;
+    }
+
+    return std::make_pair(next_month, next_year);
+  }
 
  public:
   /// @brief Create DateTime with Now() value and host current timezone.
@@ -423,6 +448,36 @@ class DateTime {
     return DateTime(date::zoned_time(tz_name, *time_));
   }
 
+  /// @brief Get datetime on start of month from current datetime.
+  /// @return
+  [[nodiscard]] DateTime GetStartOfMonth() const {
+    auto curr_date = date::floor<date::days>(time_->get_local_time());
+
+    date::year_month_day ymd{curr_date};
+
+    auto zoned_first_day_start =
+        DateTime(static_cast<int32_t>(ymd.year()),
+                 static_cast<uint8_t>(unsigned(ymd.month())),
+                 1,
+                 time_->get_time_zone()->name());
+
+    return DateTime(std::move(zoned_first_day_start));
+  }
+
+  /// @brief
+  /// @return
+  [[nodiscard]] DateTime GetEndOfMonth() const {
+    auto next_month = DetermineNextMonth();
+
+    auto first_day_of_next_month = DateTime(next_month.second, next_month.first,
+                                            1, time_->get_time_zone()->name());
+
+    std::chrono::seconds seconds(1);
+
+    return first_day_of_next_month -
+           std::chrono::duration_cast<std::chrono::nanoseconds>(seconds);
+  }
+
   bool operator==(const DateTime& other) const {
     if (!other.time_ || !time_) return false;
 
@@ -460,9 +515,9 @@ class DateTime {
   }
 
   friend DateTime operator+(const DateTime& dt,
-                            const std::chrono::duration<int64_t>& duration);
+                            const std::chrono::nanoseconds& duration);
   friend DateTime operator-(const DateTime& dt,
-                            const std::chrono::duration<int64_t>& duration);
+                            const std::chrono::nanoseconds& duration);
 
   friend std::optional<std::chrono::nanoseconds> operator-(const DateTime& rv,
                                                            const DateTime& lv);
@@ -482,9 +537,9 @@ enum class DateTimeCalculateSpanType : uint8_t {
   DurationSubtract = 1,
 };
 
-template <typename TDuration>
+template <typename TDuration = std::chrono::nanoseconds>
 [[nodiscard]] inline DateTime CalculateDurationSpan(
-    const DateTime& source, std::chrono::duration<TDuration> duration,
+    const DateTime& source, TDuration duration,
     DateTimeCalculateSpanType calc_type) {
   // calculate from local time not from sys_time().
   // sys_time() as time_point is platform dependent
@@ -518,14 +573,14 @@ inline std::optional<std::chrono::nanoseconds> CalculateDurationBetween(
 
 // Overloading the + operator to add duration to DateTime
 inline DateTime operator+(const DateTime& dt,
-                          const std::chrono::duration<int64_t>& duration) {
+                          const std::chrono::nanoseconds& duration) {
   return CalculateDurationSpan(dt, duration,
                                DateTimeCalculateSpanType::DurationAdd);
 }
 
 // Overloading the - operator to subtract duration from DateTime
 inline DateTime operator-(const DateTime& dt,
-                          const std::chrono::duration<int64_t>& duration) {
+                          const std::chrono::nanoseconds& duration) {
   return CalculateDurationSpan(dt, duration,
                                DateTimeCalculateSpanType::DurationSubtract);
 }
