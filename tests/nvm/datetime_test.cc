@@ -106,15 +106,19 @@ TEST_CASE("datetime-date-subtract", "[datetime][local-test]") {
 }
 
 TEST_CASE("datetime-timezone-convert", "[datetime][local-test]") {
-  auto jkt_time = dates::DateTime(2022, 7, 10, 13, 00, 00, 00, "Asia/Jakarta");
-  auto answer_utc = dates::DateTime(2022, 7, 10, 06, 00, 00, 00, "Etc/UTC");
+  using DateTime = dates::DateTime;
+
+  auto jkt_time = DateTime(2022, 7, 10, 13, 00, 00, 00, "Asia/Jakarta");
+  auto answer_utc = DateTime(2022, 7, 10, 06, 00, 00, 00, "Etc/UTC");
   auto answer_new_york =
-      dates::DateTime(2022, 7, 10, 02, 00, 00, 00, "America/New_York");
+      DateTime(2022, 7, 10, 02, 00, 00, 00, "America/New_York");
 
   auto res_utc = jkt_time.ToTimezone("Etc/UTC");
   auto res_new_york = jkt_time.ToTimezone("America/New_York");
 
   CAPTURE(jkt_time);
+  CAPTURE(answer_utc);
+  CAPTURE(answer_new_york);
   CAPTURE(res_utc);
   CAPTURE(res_new_york);
 

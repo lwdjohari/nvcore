@@ -31,24 +31,28 @@
 
 namespace nvm::dates {
 
-inline auto ToTzTime(const std::chrono::system_clock::time_point& time) {
+[[nodiscard]] inline auto ToTzTime(
+    const std::chrono::system_clock::time_point& time) {
   auto z = date::current_zone();
   return date::make_zoned(z, time);
 }
 
-inline auto ToTzTime(const date::time_zone* tz,
-                     const std::chrono::system_clock::time_point& time) {
+[[nodiscard]] inline auto ToTzTime(
+    const date::time_zone* tz,
+    const std::chrono::system_clock::time_point& time) {
   return date::make_zoned(tz, time);
 }
 
-inline auto ToTzTime(const std::string& tz_name,
-                     const std::chrono::system_clock::time_point& time) {
+[[nodiscard]] inline auto ToTzTime(
+    const std::string& tz_name,
+    const std::chrono::system_clock::time_point& time) {
   return date::make_zoned(tz_name, time);
 }
 
-inline auto ToTzTime(int32_t year, uint8_t month, uint8_t day, uint8_t hour,
-                     uint8_t minutes, uint8_t second, uint16_t milisecond,
-                     const std::string& tz_name) {
+[[nodiscard]] inline auto ToTzTime(int32_t year, uint8_t month, uint8_t day,
+                                   uint8_t hour, uint8_t minutes,
+                                   uint8_t second, uint16_t milisecond,
+                                   const std::string& tz_name) {
   if (month == 0 || month > 12) {
     throw std::range_error("Valid month is between 1 ~ 12.");
   }
@@ -96,13 +100,15 @@ inline auto ToTzTime(int32_t year, uint8_t month, uint8_t day, uint8_t hour,
   }
 }
 
-inline auto ToTzTime(int32_t year, uint8_t month, uint8_t day, uint8_t hour,
-                     uint8_t minutes, uint8_t second, uint16_t milisecond) {
+[[nodiscard]] inline auto ToTzTime(int32_t year, uint8_t month, uint8_t day,
+                                   uint8_t hour, uint8_t minutes,
+                                   uint8_t second, uint16_t milisecond) {
   return ToTzTime(year, month, day, hour, minutes, second, milisecond,
                   date::current_zone()->name());
 }
 
-inline const date::time_zone* GetTimezone(const std::string& tz_name) {
+[[nodiscard]] inline const date::time_zone* GetTimezone(
+    const std::string& tz_name) {
   auto z = date::locate_zone(tz_name);
   if (!z) {
     throw std::runtime_error("No timezone with name " + tz_name + " is found");
@@ -110,9 +116,11 @@ inline const date::time_zone* GetTimezone(const std::string& tz_name) {
   return z;
 }
 
-inline auto Now() { return ToTzTime(std::chrono::system_clock::now()); }
+[[nodiscard]] inline auto Now() {
+  return ToTzTime(std::chrono::system_clock::now());
+}
 
-inline auto UtcNow() {
+[[nodiscard]] inline auto UtcNow() {
   return ToTzTime("Etc/Utc", std::chrono::system_clock::now());
 }
 
@@ -171,7 +179,7 @@ struct DateTimePart {
         nanosecond(nanosecond) {}
 };
 
-DateTimePart GetDateTimePart(
+[[nodiscard]] DateTimePart GetDateTimePart(
     const date::zoned_time<std::chrono::nanoseconds, const date::time_zone*>&
         time) {
   // Get the local time_point and time_zone info
@@ -349,36 +357,70 @@ class DateTime {
 
   /// @brief Get Iso8601 datetime string representation
   /// @return
-  std::string ToIso8601() const { return date::format("%FT%T%z", *time_); }
+  [[nodiscard]] std::string ToIso8601() const {
+    return date::format("%FT%T%z", *time_);
+  }
 
   /// @brief Create DateTime object with host current timezone and current time.
   /// @return
-  static DateTime Now() { return DateTime(); }
+  [[nodiscard]] static DateTime Now() { return DateTime(); }
 
   /// @brief Create DateTime object with UTC timezone and current UTC time.
   /// @return
-  static DateTime UtcNow() { return DateTime("Etc/UTC"); }
+  [[nodiscard]] static DateTime UtcNow() { return DateTime("Etc/UTC"); }
 
   /// @brief Get host current timezone.
   /// @return
-  static std::string GetHostTimezoneName() {
+  [[nodiscard]] static std::string GetHostTimezoneName() {
     return std::string(date::current_zone()->name());
   }
 
-  DateTime ToUtc() const {
+  /// @brief Add current DateTime by duration.
+  /// @tparam T std::chrono::duration<T>
+  /// @param duration value of duration
+  /// @return
+  template <typename T = std::chrono::seconds>
+  [[nodiscard]] DateTime Add(const T& duration) {
+    return *this + duration;
+  }
+
+  /// @brief Subtract current DateTime by duration.
+  /// @tparam T std::chrono::duration<T>
+  /// @param duration value of duration
+  /// @return
+  template <typename T = std::chrono::seconds>
+  [[nodiscard]] DateTime Subtract(const T& duration) {
+    return *this - duration;
+  }
+
+  /// @brief Get duration span from current datetime and supplied datetime.
+  /// @tparam T std::chrono::duration<T>
+  /// @param other value to subtract
+  /// @return
+  template <typename T = std::chrono::seconds>
+  [[nodiscard]] T GetDurationSpan(const DateTime& other) {
+    return std::chrono::duration_cast<T>(*this - other);
+  }
+
+  /// @brief Convert to UTC timezone.
+  /// @return
+  [[nodiscard]] DateTime ToUtc() const {
     if (time_->get_time_zone()->name() == "Etc/UTC") {
       return DateTime(*this);
     }
 
-    return DateTime(date::zoned_time("Etc/UTC",*time_ ));
+    return DateTime(date::zoned_time("Etc/UTC", *time_));
   }
 
-  DateTime ToTimezone(const std::string& tz_name) const {
+  /// @brief Convert to specific IANA timezone.
+  /// @param tz_name
+  /// @return
+  [[nodiscard]] DateTime ToTimezone(const std::string& tz_name) const {
     if (time_->get_time_zone()->name() == tz_name) {
       return DateTime(*this);
     }
 
-    return DateTime(date::zoned_time(tz_name,*time_ ));
+    return DateTime(date::zoned_time(tz_name, *time_));
   }
 
   bool operator==(const DateTime& other) const {
