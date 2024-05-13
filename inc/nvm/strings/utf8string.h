@@ -27,7 +27,6 @@
 namespace nvm {
 namespace strings {
 
-
 /// @brief Utf8 codepoint representation
 class Utf8CodePoint {
  private:
@@ -81,7 +80,7 @@ class Utf8String {
 
   explicit Utf8String(const std::string& content) noexcept
       : content_(std::string()), is_utf8_(false) {
-        is_utf8_ = utf8::is_valid(content_.begin(), content_.end());
+    is_utf8_ = utf8::is_valid(content_.begin(), content_.end());
   };
 
   ~Utf8String(){};
@@ -108,12 +107,12 @@ class Utf8String {
   }
 
   /// @brief Return the string content
-  /// @return 
+  /// @return
   const std::string& Str() const { return content_; }
 
-  // /// @brief 
-  // /// @param range 
-  // /// @return 
+  // /// @brief
+  // /// @param range
+  // /// @return
   // bool ContainsCodePointRange(const Ut8CodepointRange& range) const {
   //   size_t num_codepoints = content_.Len();
   //   for (size_t i = 0, cp = 0; cp < num_codepoints; ++cp) {
@@ -134,18 +133,19 @@ class Utf8String {
     static_assert(
         std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
         "T can only be char or uint8_t");
-    auto utf8_string =  std::string(bytes,size);
+    auto utf8_string = std::string(bytes, size);
     utf8::replace_invalid(bytes, bytes + size, std::back_inserter(utf8_string));
     return Utf8String(std::move(utf8_string));
   }
 
   template <typename T>
-  static Utf8String MakeUtf8StringUnchecked(const T* bytes, size_t size) noexcept {
+  static Utf8String MakeUtf8StringUnchecked(const T* bytes,
+                                            size_t size) noexcept {
     static_assert(
         std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
         "T can only be char or uint8_t");
-    
-    return Utf8String(std::move(std::string(bytes,size)));
+
+    return Utf8String(std::move(std::string(bytes, size)));
   }
 };
 

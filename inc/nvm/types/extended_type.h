@@ -12,8 +12,8 @@ typedef signed long long sint64_t;
 typedef char cbyte;
 typedef uint8_t nbyte;
 
-} // namespace extended
-} // namespace types
-} // namespace nvm
+}  // namespace extended
+}  // namespace types
+}  // namespace nvm
 
-#endif // NVM_CORE_TYPES_V2_EXTENDED_TYPE_H
+#endif  // NVM_CORE_TYPES_V2_EXTENDED_TYPE_H

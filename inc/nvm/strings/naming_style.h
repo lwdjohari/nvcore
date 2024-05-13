@@ -208,7 +208,7 @@ inline std::string ToPascalCase(const std::string &str) {
 }
 
 inline std::string ConvertStyle(const NamingStyleType &destinationConvention,
-                         const std::string &value) {
+                                const std::string &value) {
   if (destinationConvention == NamingStyleType::CamelCase) {
     return std::move(ToCamelCase(value));
   } else if (destinationConvention == NamingStyleType::PascalCase) {
@@ -243,8 +243,6 @@ inline NamingStyleType ToEnum(const std::string &str) {
     return NamingStyleType::Unknown;
   }
 }
-
-
 
 }  // namespace naming_style
 }  // namespace strings

@@ -2,8 +2,8 @@
 #define NVM_CORE_IO_V2_BYTE_STREAM_H
 
 #include <fstream>
-#include <memory>
 #include <functional>
+#include <memory>
 
 namespace nvm {
 namespace io {
@@ -76,9 +76,10 @@ class ByteStream {
 
     return *this;
   }
-  
+
   template <typename TVal>
-  ByteStream<TStream, TByte> &ReadChain(StreamCursor &cursor, std::function<void(const TVal &val)> l) {
+  ByteStream<TStream, TByte> &ReadChain(
+      StreamCursor &cursor, std::function<void(const TVal &val)> l) {
     if (!cursor.IsSuccess()) {
       return *this;
     }
@@ -87,14 +88,11 @@ class ByteStream {
     SetCanCursorChain(cursor, cursor.CanChain(), true,
                       cursor.FinalPosition() + moving, moving);
 
-    
     TVal val = 100.0f;
     l(val);
     return *this;
   }
 };
-
-
 
 }  // namespace io
 }  // namespace nvm

@@ -27,12 +27,12 @@
 namespace nvm {
 namespace vectorex {
 
-/// @brief 
-/// @tparam T 
-/// @param seq1 
-/// @param seq2 
-/// @param size 
-/// @return 
+/// @brief
+/// @tparam T
+/// @param seq1
+/// @param seq2
+/// @param size
+/// @return
 template <typename T>
 inline bool CompareElements(const T *seq1, const T *seq2, size_t size) {
   if (!seq1 && !seq2 && size == 0) return true;
@@ -52,12 +52,11 @@ bool Contains(const std::vector<T> &vec, const T &value) {
   return std::find(vec.begin(), vec.end(), value) != vec.end();
 }
 
-
-/// @brief 
-/// @tparam T 
-/// @param vec 
-/// @param value 
-/// @return 
+/// @brief
+/// @tparam T
+/// @param vec
+/// @param value
+/// @return
 template <typename T>
 std::pair<bool, size_t> FindInVector(const std::vector<T> &vec,
                                      const T &value) {
@@ -91,8 +90,8 @@ std::pair<bool, size_t> FindInVector(const std::vector<T> &vec,
 /// @param memberFunction
 /// @return
 template <typename T, typename ValueType, typename MemberFunction>
-std::pair<bool, size_t>  FindInVectorByMethodValue(std::vector<T> &vec, ValueType valueToFind,
-                                  MemberFunction memberFunction) {
+std::pair<bool, size_t> FindInVectorByMethodValue(
+    std::vector<T> &vec, ValueType valueToFind, MemberFunction memberFunction) {
   auto it = std::find_if(vec.begin(), vec.end(),
                          [valueToFind, memberFunction](const T &obj) {
                            return (obj.*memberFunction)() == valueToFind;
@@ -110,22 +109,21 @@ std::pair<bool, size_t>  FindInVectorByMethodValue(std::vector<T> &vec, ValueTyp
   }
 }
 
-/// @brief 
-/// @tparam T 
-/// @tparam ValueType 
-/// @tparam MemberFunction 
-/// @param vec 
-/// @param value_to_find 
-/// @param member_fn 
-/// @return 
+/// @brief
+/// @tparam T
+/// @tparam ValueType
+/// @tparam MemberFunction
+/// @param vec
+/// @param value_to_find
+/// @param member_fn
+/// @return
 template <typename T, typename ValueType, typename MemberFunction>
-std::pair<bool, size_t>  FindInVectorPointerByMethodValue(std::vector<T> &vec,
-                                         ValueType value_to_find,
-                                         MemberFunction member_fn) {
-  auto it =
-      std::find_if(vec.begin(), vec.end(), [value_to_find, member_fn](const T &obj) {
-        return ((*obj).*member_fn)() == value_to_find;
-      });
+std::pair<bool, size_t> FindInVectorPointerByMethodValue(
+    std::vector<T> &vec, ValueType value_to_find, MemberFunction member_fn) {
+  auto it = std::find_if(vec.begin(), vec.end(),
+                         [value_to_find, member_fn](const T &obj) {
+                           return ((*obj).*member_fn)() == value_to_find;
+                         });
 
   if (it != vec.end()) {
     // If found, return the index

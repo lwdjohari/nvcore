@@ -55,8 +55,8 @@ namespace bytes {
 namespace details {
 namespace ch {
 
-inline void  CopyBytes(const char *src, char *dest, size_t size,
-               ByteOpResult &err) noexcept {
+inline void CopyBytes(const char *src, char *dest, size_t size,
+                      ByteOpResult &err) noexcept {
   if (size == 0) {
     err = ByteOpResult::SizeMismatch;
     return;
@@ -71,7 +71,8 @@ inline void  CopyBytes(const char *src, char *dest, size_t size,
   std::memcpy(dest, src, size * sizeof(char));
 }
 
-inline void  EncodeInt8(const int8_t &value, char *buffer, size_t size, ByteOpResult &err) {
+inline void EncodeInt8(const int8_t &value, char *buffer, size_t size,
+                       ByteOpResult &err) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return;
@@ -86,7 +87,8 @@ inline void  EncodeInt8(const int8_t &value, char *buffer, size_t size, ByteOpRe
   err = ByteOpResult::Ok;
 }
 
-inline void  EncodeUInt8(const uint8_t &value, char *buffer, size_t size, ByteOpResult &err) {
+inline void EncodeUInt8(const uint8_t &value, char *buffer, size_t size,
+                        ByteOpResult &err) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return;
@@ -101,8 +103,8 @@ inline void  EncodeUInt8(const uint8_t &value, char *buffer, size_t size, ByteOp
   err = ByteOpResult::Ok;
 }
 
-inline void  EncodeInt16(const int16_t *value, char *buffer, size_t size,
-                 ByteOpResult &err, bool is_big_endian) {
+inline void EncodeInt16(const int16_t *value, char *buffer, size_t size,
+                        ByteOpResult &err, bool is_big_endian) {
   if (!buffer || !value) {
     err = ByteOpResult::Nullptr;
     return;
@@ -139,9 +141,8 @@ inline void  EncodeInt16(const int16_t *value, char *buffer, size_t size,
   err = ByteOpResult::Ok;
 }
 
-
-inline void  EncodeUInt16(const uint16_t *value, char *buffer, size_t size,
-                  ByteOpResult &err, bool is_big_endian) {
+inline void EncodeUInt16(const uint16_t *value, char *buffer, size_t size,
+                         ByteOpResult &err, bool is_big_endian) {
   if ((!buffer) | (!value)) {
     err = ByteOpResult::Nullptr;
     return;
@@ -179,8 +180,8 @@ inline void  EncodeUInt16(const uint16_t *value, char *buffer, size_t size,
   err = ByteOpResult::Ok;
 }
 
-inline void  EncodeInt32(const int32_t *value, char *buffer, size_t size,
-                 ByteOpResult &err, bool is_big_endian) {
+inline void EncodeInt32(const int32_t *value, char *buffer, size_t size,
+                        ByteOpResult &err, bool is_big_endian) {
   if (!buffer || !value) {
     err = ByteOpResult::Nullptr;
     return;
@@ -227,8 +228,8 @@ inline void  EncodeInt32(const int32_t *value, char *buffer, size_t size,
   err = ByteOpResult::Ok;
 }
 
-inline void  EncodeUInt32(const uint32_t *value, char *buffer, size_t size,
-                  ByteOpResult &err, bool is_big_endian) {
+inline void EncodeUInt32(const uint32_t *value, char *buffer, size_t size,
+                         ByteOpResult &err, bool is_big_endian) {
   if (!buffer || !value) {
     err = ByteOpResult::Nullptr;
     return;
@@ -280,8 +281,8 @@ inline void  EncodeUInt32(const uint32_t *value, char *buffer, size_t size,
   err = ByteOpResult::Ok;
 }
 
-inline void  EncodeInt64(const int64_t *value, char *buffer, size_t size,
-                 ByteOpResult &err, bool is_big_endian) {
+inline void EncodeInt64(const int64_t *value, char *buffer, size_t size,
+                        ByteOpResult &err, bool is_big_endian) {
   if (!buffer || !value) {
     err = ByteOpResult::Nullptr;
     return;
@@ -343,8 +344,8 @@ inline void  EncodeInt64(const int64_t *value, char *buffer, size_t size,
   err = ByteOpResult::Ok;
 }
 
-inline void  EncodeUInt64(const uint64_t *value, char *buffer, size_t size,
-                  ByteOpResult &err, bool is_big_endian) {
+inline void EncodeUInt64(const uint64_t *value, char *buffer, size_t size,
+                         ByteOpResult &err, bool is_big_endian) {
   if (!buffer || !value) {
     err = ByteOpResult::Nullptr;
     return;
@@ -407,8 +408,8 @@ inline void  EncodeUInt64(const uint64_t *value, char *buffer, size_t size,
   err = ByteOpResult::Ok;
 }
 
-inline void  EncodeFloat(const float *value, char *buffer, size_t size,
-                 ByteOpResult &err, bool is_big_endian) {
+inline void EncodeFloat(const float *value, char *buffer, size_t size,
+                        ByteOpResult &err, bool is_big_endian) {
   if (!buffer || !value) {
     err = ByteOpResult::Nullptr;
     return;
@@ -434,8 +435,8 @@ inline void  EncodeFloat(const float *value, char *buffer, size_t size,
   err = ByteOpResult::Ok;
 }
 
-inline void  EncodeDouble(const double *value, char *buffer, size_t size,
-                  ByteOpResult &err, bool is_big_endian) {
+inline void EncodeDouble(const double *value, char *buffer, size_t size,
+                         ByteOpResult &err, bool is_big_endian) {
   if (!buffer || !value) {
     err = ByteOpResult::Nullptr;
     return;
@@ -459,8 +460,8 @@ inline void  EncodeDouble(const double *value, char *buffer, size_t size,
   EncodeUInt64(&long_value, buffer, size, err, is_big_endian);
 }
 
-inline void  EncodeAsciiString(const std::string &value, char *buffer, size_t size,
-                       ByteOpResult &err) {
+inline void EncodeAsciiString(const std::string &value, char *buffer,
+                              size_t size, ByteOpResult &err) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return;
@@ -494,7 +495,7 @@ inline int8_t DecodeInt8(const char *buffer, size_t size, ByteOpResult &err) {
 }
 
 inline int16_t DecodeInt16(const char *buffer, size_t size, ByteOpResult &err,
-                    bool is_big_endian) {
+                           bool is_big_endian) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return 0;
@@ -530,7 +531,7 @@ inline int16_t DecodeInt16(const char *buffer, size_t size, ByteOpResult &err,
 }
 
 inline int32_t DecodeInt32(const char *buffer, size_t size, ByteOpResult &err,
-                    bool is_big_endian) {
+                           bool is_big_endian) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return 0;
@@ -575,7 +576,7 @@ inline int32_t DecodeInt32(const char *buffer, size_t size, ByteOpResult &err,
 }
 
 inline int64_t DecodeInt64(const char *buffer, size_t size, ByteOpResult &err,
-                    bool is_big_endian) {
+                           bool is_big_endian) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return 0;
@@ -654,7 +655,7 @@ inline uint8_t DecodeUInt8(const char *buffer, size_t size, ByteOpResult &err) {
 }
 
 inline uint16_t DecodeUInt16(const char *buffer, size_t size, ByteOpResult &err,
-                      bool is_big_endian) {
+                             bool is_big_endian) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return 0;
@@ -689,7 +690,7 @@ inline uint16_t DecodeUInt16(const char *buffer, size_t size, ByteOpResult &err,
 }
 
 inline uint32_t DecodeUInt32(const char *buffer, size_t size, ByteOpResult &err,
-                      bool is_big_endian) {
+                             bool is_big_endian) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return 0;
@@ -735,7 +736,7 @@ inline uint32_t DecodeUInt32(const char *buffer, size_t size, ByteOpResult &err,
 }
 
 inline uint64_t DecodeUInt64(const char *buffer, size_t size, ByteOpResult &err,
-                      bool is_big_endian) {
+                             bool is_big_endian) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return 0;
@@ -796,7 +797,7 @@ inline uint64_t DecodeUInt64(const char *buffer, size_t size, ByteOpResult &err,
 }
 
 inline float DecodeFloat(const char *buffer, size_t size, ByteOpResult &err,
-                  bool is_big_endian) {
+                         bool is_big_endian) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return 0.0f;
@@ -816,7 +817,7 @@ inline float DecodeFloat(const char *buffer, size_t size, ByteOpResult &err,
 }
 
 inline double DecodeDouble(const char *buffer, size_t size, ByteOpResult &err,
-                    bool is_big_endian) {
+                           bool is_big_endian) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return 0.0;
@@ -836,7 +837,7 @@ inline double DecodeDouble(const char *buffer, size_t size, ByteOpResult &err,
 }
 
 inline std::string DecodeAsciiString(const char *buffer, size_t size,
-                              ByteOpResult &err) {
+                                     ByteOpResult &err) {
   if (!buffer) {
     err = ByteOpResult::Nullptr;
     return std::string();

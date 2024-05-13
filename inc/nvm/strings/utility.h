@@ -21,17 +21,17 @@
 #define NVM_CORE_STRINGS_V2_UTILITY_H
 
 #include <algorithm>
-#include <string>
 #include <sstream>
+#include <string>
 
 namespace nvm {
 namespace strings {
 namespace utility {
 
-/// @brief 
-/// @param s 
-/// @param t 
-/// @return 
+/// @brief
+/// @param s
+/// @param t
+/// @return
 inline int GetLevenshteinDistance(const std::string &s, const std::string &t) {
   if (s.empty()) return t.size();
   if (t.empty()) return s.size();
@@ -52,7 +52,7 @@ inline int GetLevenshteinDistance(const std::string &s, const std::string &t) {
   }
 
   int upper;
-  int upper_left; // cppcheck-suppress variableScope
+  int upper_left;  // cppcheck-suppress variableScope
   int cost;
 
   for (size_t j = 1; j <= m; j++) {
@@ -70,9 +70,9 @@ inline int GetLevenshteinDistance(const std::string &s, const std::string &t) {
   return p[n];
 };
 
-/// @brief 
-/// @param str 
-/// @return 
+/// @brief
+/// @param str
+/// @return
 inline std::string Trim(const std::string &str) {
   // Find the first non-whitespace character
   const auto start = str.find_first_not_of(" \t\r\n");
@@ -92,24 +92,23 @@ inline std::string Trim(const std::string &str) {
   return std::move(ss.str());
 };
 
-/// @brief 
-/// @param c 
-/// @return 
+/// @brief
+/// @param c
+/// @return
 inline bool IsWhitespaceChar(char c) {
   return std::isspace(static_cast<unsigned char>(c));
 };
 
-/// @brief 
-/// @param str 
-/// @return 
+/// @brief
+/// @param str
+/// @return
 inline bool IsWhitespaceString(const std::string &str) {
   return str.find_first_not_of(" \t\n\v\f\r") == std::string::npos;
 };
 
-
-/// @brief 
-/// @param str 
-/// @return 
+/// @brief
+/// @param str
+/// @return
 inline std::string ToUpper(const std::string &str) {
   std::string newstr = std::string(str);
   std::transform(newstr.begin(), newstr.end(), newstr.begin(),
@@ -117,16 +116,15 @@ inline std::string ToUpper(const std::string &str) {
   return std::move(newstr);
 };
 
-/// @brief 
-/// @param str 
-/// @return 
+/// @brief
+/// @param str
+/// @return
 inline std::string ToLower(const std::string &str) {
   std::string newstr = std::string(str);
   std::transform(newstr.begin(), newstr.end(), newstr.begin(),
                  [](unsigned char c) { return std::tolower(c); });
   return std::move(newstr);
 };
-
 
 }  // namespace utility
 }  // namespace strings

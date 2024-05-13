@@ -26,17 +26,16 @@ namespace events {
 
 class Arg {
  public:
-    
-    /// @brief Default constructor for Arg class.
-    Arg(){};
+  /// @brief Default constructor for Arg class.
+  Arg(){};
 
-    /// @brief Destructor for Arg class.
-    ~Arg(){};
+  /// @brief Destructor for Arg class.
+  ~Arg(){};
 };
 
-/// @brief 
-/// @tparam TSender 
-/// @tparam TEventValue 
+/// @brief
+/// @tparam TSender
+/// @tparam TEventValue
 template <typename TSender, typename TEventValue>
 class EventArg {
  private:
