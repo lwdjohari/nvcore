@@ -602,5 +602,11 @@ inline std::optional<std::chrono::nanoseconds> operator-(const DateTime& lv,
   return CalculateDurationBetween(lv, rv);
 }
 
+[[nodiscard]] inline std::optional<std::string> ToIso8601Optional(
+    const std::optional<DateTime>& value) {
+  return value.has_value() ? static_cast<std::string>(value.value())
+                           : std::optional<std::string>(std::nullopt);
+}
+
 }  // namespace nvm::dates
 #endif
