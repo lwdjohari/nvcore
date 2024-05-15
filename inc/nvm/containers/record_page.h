@@ -34,7 +34,7 @@ struct Page {
   explicit Page(size_t page, size_t item_per_page = 30, bool is_paging = true)
       : page(page), item_per_page(item_per_page), is_paging(is_paging) {}
 
-}
+};
 
 class RecordPage final {
  private:
