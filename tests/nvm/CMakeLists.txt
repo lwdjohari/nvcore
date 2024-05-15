@@ -15,6 +15,7 @@ set(TEST_SOURCES
     byte_converter_encode_test_little_endian.cc
     logic_test.cc
     datetime_test.cc
+    record_test.cc
     # Add more test files if needed
 )
 
