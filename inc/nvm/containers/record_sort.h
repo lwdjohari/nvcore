@@ -82,11 +82,11 @@ class RecordSort final {
   RecordSort() : fields_(), pinned_fields_(){};
   ~RecordSort(){};
 
-  bool IsFieldExist(const std::string& key) {
+  bool IsFieldExist(const std::string& key) const {
     return fields_.find(key) != fields_.end();
   }
 
-  bool IsFieldExistOnPinned(const std::string& key) {
+  bool IsFieldExistOnPinned(const std::string& key) const {
     return pinned_fields_.find(key) != pinned_fields_.end();
   }
 
@@ -125,10 +125,24 @@ class RecordSort final {
     fields_.clear();
   }
 
+  bool IsEmpty() const { return fields_.empty(); }
+
+  const std::unordered_map<std::string, SortField> Fields() const {
+    return fields_;
+  }
+
+  const std::unordered_map<std::string, SortField> PinnedFields() const {
+    return pinned_fields_;
+  }
+
   std::string GenerateQuery() const {
     std::vector<std::string> start_pinned;
     std::vector<std::string> normal_fields;
     std::vector<std::string> end_pinned;
+
+    if (fields_.empty() && pinned_fields_.empty()) {
+      return std::string();
+    }
 
     auto add_field = [](const std::pair<const std::string, SortField>& pair,
                         std::vector<std::string>& container) {
