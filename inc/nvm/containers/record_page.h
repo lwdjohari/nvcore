@@ -24,8 +24,19 @@
 #include <cstdint>
 namespace nvm::containers {
 
-    
-class RecordPage {
+struct Page {
+  size_t page;
+  size_t item_per_page;
+  bool is_paging;
+
+  Page() : page(1), item_per_page(30), is_paging(true){};
+
+  explicit Page(size_t page, size_t item_per_page = 30, bool is_paging = true)
+      : page(page), item_per_page(item_per_page), is_paging(is_paging) {}
+
+}
+
+class RecordPage final {
  private:
   size_t total_items_;
   uint32_t items_per_page_;
