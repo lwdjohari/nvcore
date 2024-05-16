@@ -6,8 +6,23 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <variant>
+#include <vector>
 
 namespace nvm::containers {
+
+using DefaultPostgresParamType =
+    std::variant<int, long long, float, double, std::string, bool,
+                 std::chrono::system_clock::time_point, std::vector<int>>;
+
+// using DefaultPostgresParamType =
+//     std::variant<int, long long, float, double, std::string, bool,
+//                  std::chrono::system_clock::time_point, std::vector<int>,
+//                  std::vector<long long>, std::vector<float>,
+//                  std::vector<double>, std::vector<std::string>,
+//                  std::vector<bool>,
+//                  std::vector<std::chrono::system_clock::time_point>>;
+
 struct RecordTable {
   std::string name;
   std::optional<std::string> alias;
