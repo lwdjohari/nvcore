@@ -16,6 +16,7 @@ set(TEST_SOURCES
     logic_test.cc
     datetime_test.cc
     record_test.cc
+    validation_test.cc
     # Add more test files if needed
 )
 
