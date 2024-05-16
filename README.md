@@ -1,7 +1,9 @@
 # NVM Core lib
 
 All the smallest building block and helpers that make our life easier.
-Written in C++17 and designed with header only lib and no dependecies lib.
+Written in C++17 and designed with header only lib and 
+deps only to utf8-cpp and Howard Hinnant date static import
+for handling Utf8String and DateTime with timezone.
 
 > [!WARNING]
 Status : WIP, Experimental & Unstable.
