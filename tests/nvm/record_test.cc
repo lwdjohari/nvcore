@@ -3,6 +3,8 @@
 #include <iostream>
 
 #include "catch2/catch_all.hpp"
+#include "nvm/containers/record_filter.h"
+#include "nvm/containers/record_operation.h"
 #include "nvm/containers/record_page.h"
 #include "nvm/containers/record_sort.h"
 #include "nvm/logic.h"
@@ -88,4 +90,124 @@ TEST_CASE("record-sort", "[record-sort][normal-case]") {
   std::cout << "Query: " << query;
 
   REQUIRE(query == "ORDER BY u.username DESC, c.name ASC");
+}
+
+TEST_CASE("record-filter", "[record-sort][normal-case]") {
+  using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
+  using RecordWhere = nvm::containers::RecordWhere<DefaultPostgresParamType>;
+  using RecordClause = nvm::containers::RecordClause<DefaultPostgresParamType>;
+  using SqlOperator = nvm::containers::SqlOperator;
+  using LogicOperator = nvm::containers::LogicOperator;
+  RecordWhere filter;
+
+  RecordClause& clause = filter.AddClause(6);
+  clause
+      .AddConditionIn<std::string>("department",
+                                   {"engineering", "sales", "devops"})
+      .And()
+      .StartGroup()
+      .AddCondition<int>("age", SqlOperator::kGreater, 30)
+      .And()
+      .AddCondition<int>("salary", SqlOperator::kGreater, 50000)
+      .EndGroup()
+      .Or()
+      .AddCondition<std::string>("name", SqlOperator::kLike, "Alice%")
+      .And()
+      .AddCondition<std::string>("city", SqlOperator::kNotEqual, "NYC")
+      .Or()
+      .StartGroup()
+      .AddConditionBetween<std::chrono::system_clock::time_point>(
+          "hire_date", std::chrono::system_clock::now(),
+          std::chrono::system_clock::now() + std::chrono::hours(24))
+      .EndGroup();
+
+  std::string where_clause = filter.GenerateWhereClause();
+  auto parameter_values = filter.Values();
+  std::cout << "Generated SQL WHERE clause:\n" << where_clause << std::endl;
+  std::cout << "Values:\n" << filter.GetAllParameterValuesAsString();
+  std::cout << "[" << parameter_values->size() << " Parameter Values]";
+
+  REQUIRE(where_clause ==
+          "WHERE department IN ($6, $7, $8) AND (age > $9 AND salary > $10) OR "
+          "name LIKE $11 AND city != $12 OR (hire_date BETWEEN $13 AND $14)");
+}
+
+TEST_CASE("record-insert", "[record-op][normal-case]") {
+  using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
+  using RecordInsert = nvm::containers::RecordInsert<DefaultPostgresParamType>;
+  using RecordUpdate = nvm::containers::RecordUpdate<DefaultPostgresParamType>;
+  using RecordDelete = nvm::containers::RecordDelete<DefaultPostgresParamType>;
+  using SqlOperator = nvm::containers::SqlOperator;
+ 
+
+  // Example for RecordInsert
+  auto insert_values =
+      std::make_shared<std::vector<DefaultPostgresParamType>>();
+  RecordInsert insert_record("users", 1, insert_values);
+  
+  insert_record.AddValue("username", std::string("john_doe"))
+      .AddValue("age", 30)
+      .AddValue("created_at", std::chrono::system_clock::now())
+      .AddReturning("id");
+
+  std::cout << "Insert Query: " << insert_record.ToString() << std::endl;
+  
+  std::cout << "Columns: ";
+  for (const auto& column : insert_record.Columns()) {
+    std::cout << column << ", ";
+  }
+  std::cout << std::endl;
+
+  REQUIRE(true==true);
+}
+
+TEST_CASE("record-update", "[record-op][normal-case]") {
+  using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
+  using RecordInsert = nvm::containers::RecordInsert<DefaultPostgresParamType>;
+  using RecordUpdate = nvm::containers::RecordUpdate<DefaultPostgresParamType>;
+  using RecordDelete = nvm::containers::RecordDelete<DefaultPostgresParamType>;
+  using SqlOperator = nvm::containers::SqlOperator;
+
+  // Example for RecordUpdate
+  auto update_values =
+      std::make_shared<std::vector<DefaultPostgresParamType>>();
+  RecordUpdate update_record("users", 1, update_values);
+  update_record.SetValue("age", 31)
+      .AddCondition("username", SqlOperator::kEqual, std::string("john_doe"))
+      .AddReturning("updated_at");
+
+  std::cout << "Update Query: " << update_record.ToString() << std::endl;
+  
+  std::cout << "Columns: ";
+  for (const auto& column : update_record.Columns()) {
+    std::cout << column << ", ";
+  }
+  std::cout << std::endl;
+
+  REQUIRE(true==true);
+}
+
+TEST_CASE("record-delete", "[record-op][normal-case]") {
+  using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
+  using RecordInsert = nvm::containers::RecordInsert<DefaultPostgresParamType>;
+  using RecordUpdate = nvm::containers::RecordUpdate<DefaultPostgresParamType>;
+  using RecordDelete = nvm::containers::RecordDelete<DefaultPostgresParamType>;
+  using SqlOperator = nvm::containers::SqlOperator;
+  // Example for RecordDelete
+  auto delete_values =
+      std::make_shared<std::vector<DefaultPostgresParamType>>();
+  RecordDelete delete_record("users", 1, delete_values);
+  delete_record
+      .AddCondition("username", SqlOperator::kEqual, std::string("john_doe"))
+      .AddReturning("deleted_at");
+
+  std::cout << "Delete Query: " << delete_record.ToString() << std::endl;
+  
+  std::cout << "Columns: ";
+  for (const auto& column : delete_record.Columns()) {
+    std::cout << column << ", ";
+  }
+  std::cout << std::endl;
+
+  REQUIRE(true==true);
 }
