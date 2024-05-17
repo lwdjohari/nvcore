@@ -1,3 +1,22 @@
+/*
+ *  Copyright (c) 2024 Linggawasistha Djohari
+ * <linggawasistha.djohari@outlook.com> Licensed to Linggawasistha Djohari under
+ * one or more contributor license agreements. See the NOTICE file distributed
+ * with this work for additional information regarding copyright ownership.
+ *
+ *  Linggawasistha Djohari licenses this file to you under the Apache License,
+ *  Version 2.0 (the "License"); you may not use this file except in
+ *  compliance with the License. You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 #pragma once
 
 #include <cctype>
@@ -13,6 +32,9 @@
 #include <unordered_set>
 #include <vector>
 
+#include "nvm/macro.h"
+#include "nvm/types/type_utility.h"
+
 namespace nvm::containers::validations {
 
 enum class ValidationOperator {
@@ -23,6 +45,20 @@ enum class ValidationOperator {
   kGreater,
   kGreaterOrEqual
 };
+
+// cppcheck-suppress unknownMacro
+NVM_ENUM_CLASS_DISPLAY_TRAIT(ValidationOperator)
+
+enum class ValidationConstraint {
+  // clang-format off
+  Strict,                       /// Must have value and passed the validation rule, otherwise will produce validation error
+  ValidOnNull,                  /// If Null will be resulting validation success,
+  ValidOnNullOrEmpty,           /// If Null or Empty will be resulting validation success.
+  ValidOnNullEmptyOrWhiteSpace  /// If Null or Empty or Whitespace will be resulting validation success.
+  // clang-format on
+};
+
+NVM_ENUM_CLASS_DISPLAY_TRAIT(ValidationConstraint)
 
 struct ValidationError {
   std::string key;
@@ -77,9 +113,19 @@ class Validator {
   Validator& IsNotNull(
       std::optional<int> error_code = std::nullopt,
       const std::string& message = "Value must not be null") noexcept {
+    NVM_ASSERT_VALID_NULLABLE_TYPE(T)
     tasks_.emplace([this, error_code, message]() noexcept {
-      if (must_be_valid_ && !value_) {
-        result_.AddError(key_, error_code, message);
+      bool is_empty = true;
+      if (must_be_valid_) {
+        if constexpr (std::is_same_v<T, std::optional<T>>) {
+          is_empty = !value_.has_value();
+        } else if constexpr (nvm::types::utility::is_smart_ptr_v<T>()) {
+          is_empty = !value_;
+        }
+
+        if (is_empty) {
+          result_.AddError(key_, error_code, message);
+        }
       }
     });
     return *this;
@@ -88,21 +134,23 @@ class Validator {
   Validator& IsNotEmpty(
       std::optional<int> error_code = std::nullopt,
       const std::string& message = "Value must not be empty") noexcept {
+    NVM_ASSERT_VALID_NULLABLE_OR_EMPTY_TYPE(T)
     tasks_.emplace([this, error_code, message]() noexcept {
+      bool is_empty = true;
       if (must_be_valid_) {
-        bool is_empty = false;
-        if constexpr (std::is_same_v<T, std::string>) {
-          is_empty = value_.empty();
-        } else if constexpr (std::is_same_v<T, std::string_view>) {
-          is_empty = value_.empty();
-        } else if constexpr (std::is_same_v<T, std::optional<std::string>>) {
+        if constexpr (nvm::types::utility::is_string_and_string_view_v<T>()) {
+          auto is_empty = value_.empty();
+
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_optional_v<T>()) {
           is_empty = !value_.has_value() || value_->empty();
-        } else if constexpr (std::is_same_v<T,
-                                            std::optional<std::string_view>>) {
-          is_empty = !value_.has_value() || value_->empty();
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_smart_ptr_v<T>()) {
+          is_empty = !value_ || value_->empty();
         } else if constexpr (std::is_pointer_v<T>) {
           is_empty = !value_;
         }
+
         if (is_empty) {
           result_.AddError(key_, error_code, message);
         }
@@ -115,23 +163,28 @@ class Validator {
       std::optional<int> error_code = std::nullopt,
       const std::string& message =
           "Value must not be empty, null, or whitespace") noexcept {
+    NVM_ASSERT_VALID_NULLABLE_OR_EMPTY_TYPE(T)
     tasks_.emplace([this, error_code, message]() noexcept {
       if (must_be_valid_) {
         bool is_empty_null_or_whitespace = false;
-        if constexpr (std::is_same_v<T, std::string> ||
-                      std::is_same_v<T, std::string_view>) {
+        if constexpr (nvm::types::utility::is_string_and_string_view_v<T>()) {
           is_empty_null_or_whitespace =
               value_.empty() ||
               std::all_of(value_.begin(), value_.end(), ::isspace);
-        } else if constexpr (std::is_same_v<T, std::optional<std::string>> ||
-                             std::is_same_v<T,
-                                            std::optional<std::string_view>>) {
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_optional_v<T>()) {
           is_empty_null_or_whitespace =
               !value_.has_value() || value_->empty() ||
               std::all_of(value_->begin(), value_->end(), ::isspace);
-        } else if constexpr (std::is_pointer_v<T>) {
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_smart_ptr_v<T>()) {
+          is_empty_null_or_whitespace =
+              !value_ || value_->empty() ||
+              std::all_of(value_->begin(), value_->end(), ::isspace);
+        } else if constexpr (nvm::types::utility::is_smart_ptr_v<T>) {
           is_empty_null_or_whitespace = !value_;
         }
+
         if (is_empty_null_or_whitespace) {
           result_.AddError(key_, error_code, message);
         }
@@ -143,19 +196,27 @@ class Validator {
   Validator& IsLength(
       size_t min, size_t max, std::optional<int> error_code = std::nullopt,
       const std::string& message = "Value length is out of range") noexcept {
-    if constexpr (std::is_same_v<T, std::string> ||
-                  std::is_same_v<T, std::string_view>) {
+    NVM_ASSERT_VALID_STRING_SPTR_TYPE(T)
+    if constexpr (nvm::types::utility::is_string_and_string_view_v<T>()) {
       tasks_.emplace([this, min, max, error_code, message]() noexcept {
         if (must_be_valid_ &&
             (value_.length() < min || value_.length() > max)) {
           result_.AddError(key_, error_code, message);
         }
       });
-    } else if constexpr (std::is_same_v<T, std::optional<std::string>> ||
-                         std::is_same_v<T, std::optional<std::string_view>>) {
+    } else if constexpr (nvm::types::utility::
+                             is_string_and_string_view_optional_v<T>()) {
       tasks_.emplace([this, min, max, error_code, message]() noexcept {
         if (must_be_valid_ && value_.has_value() &&
             (value_->length() < min || value_->length() > max)) {
+          result_.AddError(key_, error_code, message);
+        }
+      });
+    } else if constexpr (nvm::types::utility::
+                             is_string_and_string_view_smart_ptr_v<T>()) {
+      tasks_.emplace([this, min, max, error_code, message]() noexcept {
+        if (must_be_valid_ &&
+            (!value_ || (value_->length() < min || value_->length() > max))) {
           result_.AddError(key_, error_code, message);
         }
       });
@@ -163,45 +224,65 @@ class Validator {
     return *this;
   }
 
-  Validator& Is(ValidationOperator op, const T& other,
-                std::optional<int> error_code = std::nullopt,
-                const std::string& message =
-                    "Value does not match the condition") noexcept {
-    tasks_.emplace([this, op, other, error_code, message]() noexcept {
-      if (must_be_valid_) {
-        bool condition = false;
-        switch (op) {
-          case ValidationOperator::kEqual:
-            condition = value_ == other;
-            break;
-          case ValidationOperator::kNotEqual:
-            condition = value_ != other;
-            break;
-          case ValidationOperator::kLess:
-            condition = value_ < other;
-            break;
-          case ValidationOperator::kLessOrEqual:
-            condition = value_ <= other;
-            break;
-          case ValidationOperator::kGreater:
-            condition = value_ > other;
-            break;
-          case ValidationOperator::kGreaterOrEqual:
-            condition = value_ >= other;
-            break;
-        }
-        if (!condition) {
-          result_.AddError(key_, error_code, message);
-        }
-      }
-    });
-    return *this;
+  Validator& IsEqual(const T& other,
+                     std::optional<int> error_code = std::nullopt,
+                     const std::string& message =
+                         "Value does not match the condition") noexcept {
+    NVM_ASSERT_VALID_LOGICAL_EQ_NEQ_TYPE(T)
+    return Is(ValidationOperator::kEqual, other, error_code, message);
   }
 
+  Validator& IsNotEqual(const T& other,
+                        std::optional<int> error_code = std::nullopt,
+                        const std::string& message =
+                            "Value does not match the condition") noexcept {
+    NVM_ASSERT_VALID_LOGICAL_EQ_NEQ_TYPE(T)
+    return Is(ValidationOperator::kNotEqual, other, error_code, message);
+  }
+
+  Validator& IsLessThan(const T& other,
+                        std::optional<int> error_code = std::nullopt,
+                        const std::string& message =
+                            "Value does not match the condition") noexcept {
+    NVM_ASSERT_VALID_LOGICAL_LT_GT_TYPE(T)
+    return Is(ValidationOperator::kLess, other, error_code, message);
+  }
+
+  Validator& IsLessThanEqual(
+      const T& other, std::optional<int> error_code = std::nullopt,
+      const std::string& message =
+          "Value does not match the condition") noexcept {
+    NVM_ASSERT_VALID_LOGICAL_LTE_GTE_TYPE(T)
+    return Is(ValidationOperator::kLess, other, error_code, message);
+  }
+
+  Validator& IsGreaterThan(const T& other,
+                           std::optional<int> error_code = std::nullopt,
+                           const std::string& message =
+                               "Value does not match the condition") noexcept {
+    NVM_ASSERT_VALID_LOGICAL_LT_GT_TYPE(T)
+    return Is(ValidationOperator::kGreater, other, error_code, message);
+  }
+
+  Validator& IsGreaterThanEqual(
+      const T& other, std::optional<int> error_code = std::nullopt,
+      const std::string& message =
+          "Value does not match the condition") noexcept {
+    NVM_ASSERT_VALID_LOGICAL_LTE_GTE_TYPE(T)
+    return Is(ValidationOperator::kGreaterOrEqual, other, error_code, message);
+  }
+
+  /// @brief TODO make it to support smart pointer that wrapping arithmatic type
+  /// @param min
+  /// @param max
+  /// @param error_code
+  /// @param message
+  /// @return
   Validator& IsBetween(
       const T& min, const T& max, std::optional<int> error_code = std::nullopt,
       const std::string& message =
           "Value is not between the specified range") noexcept {
+    NVM_ASSERT_VALID_LOGICAL_LT_GT_TYPE(T)
     tasks_.emplace([this, min, max, error_code, message]() noexcept {
       if (must_be_valid_ && (value_ < min || value_ > max)) {
         result_.AddError(key_, error_code, message);
@@ -210,7 +291,7 @@ class Validator {
     return *this;
   }
 
-  Validator& Is(
+  Validator& IsMust(
       std::function<bool(const T&)> lambda,
       std::optional<int> error_code = std::nullopt,
       const std::string& message = "Custom validation failed") noexcept {
@@ -226,6 +307,8 @@ class Validator {
       const std::vector<char>& special_chars = {},
       std::optional<int> error_code = std::nullopt,
       const std::string& message = "Value must be alphanumeric") noexcept {
+    NVM_ASSERT_VALID_STRING_SPTR_TYPE(T)
+
     tasks_.emplace([this, special_chars, error_code, message]() noexcept {
       if (must_be_valid_) {
         bool is_alphanumeric = true;
@@ -234,15 +317,18 @@ class Validator {
                  std::find(special_chars.begin(), special_chars.end(), c) !=
                      special_chars.end();
         };
-        if constexpr (std::is_same_v<T, std::string> ||
-                      std::is_same_v<T, std::string_view>) {
+        if constexpr (nvm::types::utility::is_string_and_string_view_v<T>()) {
           is_alphanumeric =
               std::all_of(value_.begin(), value_.end(), is_valid_char);
-        } else if constexpr (std::is_same_v<T, std::optional<std::string>> ||
-                             std::is_same_v<T,
-                                            std::optional<std::string_view>>) {
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_optional_v<T>()) {
           is_alphanumeric =
               value_.has_value() &&
+              std::all_of(value_->begin(), value_->end(), is_valid_char);
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_smart_ptr_v<T>()) {
+          is_alphanumeric =
+              value_ != nullptr &&
               std::all_of(value_->begin(), value_->end(), is_valid_char);
         }
         if (!is_alphanumeric) {
@@ -257,23 +343,30 @@ class Validator {
       const std::vector<char>& special_chars = {},
       std::optional<int> error_code = std::nullopt,
       const std::string& message = "Value must be alphabetic") noexcept {
+    NVM_ASSERT_VALID_STRING_SPTR_TYPE(T)
+
     tasks_.emplace([this, special_chars, error_code, message]() noexcept {
       if (must_be_valid_) {
         bool is_alphabet = true;
+
         auto is_valid_char = [&special_chars](char c) {
           return std::isalpha(c) ||
                  std::find(special_chars.begin(), special_chars.end(), c) !=
                      special_chars.end();
         };
-        if constexpr (std::is_same_v<T, std::string> ||
-                      std::is_same_v<T, std::string_view>) {
+
+        if constexpr (nvm::types::utility::is_string_and_string_view_v<T>()) {
           is_alphabet =
               std::all_of(value_.begin(), value_.end(), is_valid_char);
-        } else if constexpr (std::is_same_v<T, std::optional<std::string>> ||
-                             std::is_same_v<T,
-                                            std::optional<std::string_view>>) {
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_optional_v<T>()) {
           is_alphabet =
               value_.has_value() &&
+              std::all_of(value_->begin(), value_->end(), is_valid_char);
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_smart_ptr_v<T>()) {
+          is_alphabet =
+              value_ != nullptr &&
               std::all_of(value_->begin(), value_->end(), is_valid_char);
         }
         if (!is_alphabet) {
@@ -289,6 +382,8 @@ class Validator {
                      std::optional<int> error_code = std::nullopt,
                      const std::string& message =
                          "Value must be a valid email address") noexcept {
+    NVM_ASSERT_VALID_STRING_SPTR_TYPE(T)
+
     tasks_.emplace([this, allowed_special_chars, error_code,
                     message]() noexcept {
       if (must_be_valid_) {
@@ -297,16 +392,22 @@ class Validator {
         for (char c : allowed_special_chars) {
           special_chars_pattern += "\\" + std::string(1, c);
         }
-        const std::regex pattern(R"((^[\w)" + special_chars_pattern +
-                                 R"(\-]+)@([\w\-\.]+)\.([a-zA-Z]{2,6}$))");
-        if constexpr (std::is_same_v<T, std::string> ||
-                      std::is_same_v<T, std::string_view>) {
+
+        const std::regex pattern(R"((^[a-zA-Z0-9))" + special_chars_pattern +
+                                 R"(]+)@([\w\-\.]+)\.([a-zA-Z]{2,6}$))");
+
+        //  const std::regex pattern(R"((^[\w)" + special_chars_pattern +
+        //  R"(]+)@([\w\-\.]+)\.([a-zA-Z]{2,6}$))");
+        if constexpr (nvm::types::utility::is_string_and_string_view_v<T>()) {
           is_email = std::regex_match(value_, pattern);
-        } else if constexpr (std::is_same_v<T, std::optional<std::string>> ||
-                             std::is_same_v<T,
-                                            std::optional<std::string_view>>) {
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_optional_v<T>()) {
           is_email = value_.has_value() && std::regex_match(*value_, pattern);
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_smart_ptr_v<T>()) {
+          is_email = value_ != nullptr && std::regex_match(*value_, pattern);
         }
+
         if (!is_email) {
           result_.AddError(key_, error_code, message);
         }
@@ -318,20 +419,25 @@ class Validator {
   Validator& IsNumericString(
       std::optional<int> error_code = std::nullopt,
       const std::string& message = "Value must be a numeric string") noexcept {
+    NVM_ASSERT_VALID_STRING_SPTR_TYPE(T)
+
     tasks_.emplace([this, error_code, message]() noexcept {
       if (must_be_valid_) {
         bool is_numeric = true;
         auto is_valid_char = [](char c) {
           return std::isdigit(c) || c == '.' || c == '-' || c == '+';
         };
-        if constexpr (std::is_same_v<T, std::string> ||
-                      std::is_same_v<T, std::string_view>) {
+        if constexpr (nvm::types::utility::is_string_and_string_view_v<T>()) {
           is_numeric = std::all_of(value_.begin(), value_.end(), is_valid_char);
-        } else if constexpr (std::is_same_v<T, std::optional<std::string>> ||
-                             std::is_same_v<T,
-                                            std::optional<std::string_view>>) {
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_optional_v<T>()) {
           is_numeric =
               value_.has_value() &&
+              std::all_of(value_->begin(), value_->end(), is_valid_char);
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_smart_ptr_v<T>()) {
+          is_numeric =
+              value_ != nullptr &&
               std::all_of(value_->begin(), value_->end(), is_valid_char);
         }
         if (!is_numeric) {
@@ -346,16 +452,19 @@ class Validator {
       const std::regex& pattern, std::optional<int> error_code = std::nullopt,
       const std::string& message =
           "Value must match the specified pattern") noexcept {
+    NVM_ASSERT_VALID_STRING_TYPE(T)
     tasks_.emplace([this, pattern, error_code, message]() noexcept {
       if (must_be_valid_) {
         bool is_match = true;
-        if constexpr (std::is_same_v<T, std::string> ||
-                      std::is_same_v<T, std::string_view>) {
+        if constexpr (nvm::types::utility::is_string_and_string_view_v<T>()) {
           is_match = std::regex_match(value_, pattern);
-        } else if constexpr (std::is_same_v<T, std::optional<std::string>> ||
-                             std::is_same_v<T,
-                                            std::optional<std::string_view>>) {
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_optional_v<T>()) {
           is_match = value_.has_value() && std::regex_match(*value_, pattern);
+        } else if constexpr (nvm::types::utility::
+                                 is_string_and_string_view_smart_ptr_v<T>()) {
+          is_match = is_match =
+              value_ != nullptr && std::regex_match(*value_, pattern);
         }
         if (!is_match) {
           result_.AddError(key_, error_code, message);
@@ -371,33 +480,143 @@ class Validator {
   std::queue<std::function<void()>>& tasks_;
   ValidationResult& result_;
   bool must_be_valid_;
+
+  Validator& Is(ValidationOperator op, const T& other,
+                std::optional<int> error_code = std::nullopt,
+                const std::string& message =
+                    "Value does not match the condition") noexcept {
+    tasks_.emplace([this, op, other, error_code, message]() noexcept {
+      if (must_be_valid_) {
+        bool condition = false;
+        switch (op) {
+          case ValidationOperator::kEqual:
+
+            condition = value_ == other;
+            break;
+          case ValidationOperator::kNotEqual:
+
+            condition = value_ != other;
+            break;
+          case ValidationOperator::kLess:
+
+            condition = value_ < other;
+            break;
+          case ValidationOperator::kLessOrEqual:
+
+            condition = value_ <= other;
+            break;
+          case ValidationOperator::kGreater:
+
+            condition = value_ > other;
+            break;
+          case ValidationOperator::kGreaterOrEqual:
+
+            condition = value_ >= other;
+            break;
+        }
+        if (!condition) {
+          result_.AddError(key_, error_code, message);
+        }
+      }
+    });
+    return *this;
+  }
+
+  bool IsNullInternal() {
+    if constexpr (std::is_same_v<T, std::optional<typename T::value_type>>) {
+      return !value_.has_value();
+    } else if constexpr (nvm::types::utility::is_smart_ptr_v<T>()) {
+      return !value_;
+    } else if constexpr (std::is_pointer_v<T>) {
+      return !value_;
+    }
+
+    return false;
+  }
+
+  std::optional<bool> IsEmptyInternal() {
+    if constexpr (std::is_same_v<T, std::string> ||
+                  std::is_same_v<T, std::string_view>) {
+      return value_.empty();
+    } else if constexpr (std::is_same_v<T, std::optional<std::string>> ||
+                         std::is_same_v<T, std::optional<std::string_view>>) {
+      return !value_.has_value() || value_->empty();
+    } else if constexpr (std::is_same_v<T, std::unique_ptr<std::string>> ||
+                         std::is_same_v<T, std::shared_ptr<std::string>> ||
+                         std::is_same_v<T, std::weak_ptr<std::string>>) {
+      if (!value_) {
+        return std::nullopt;
+      } else if (!value_.empty()) {
+        return true;
+      } else {
+        return false;
+      }
+    } else if constexpr (std::is_same_v<T, std::unique_ptr<std::string_view>> ||
+                         std::is_same_v<T, std::shared_ptr<std::string_view>> ||
+                         std::is_same_v<T, std::weak_ptr<std::string_view>>) {
+      if (!value_) {
+        return std::nullopt;
+      } else if (!value_.empty()) {
+        return true;
+      } else {
+        return false;
+      }
+
+    } else if constexpr (nvm::types::utility::is_smart_ptr_v<T>()) {
+      if (!value_) {
+        return std::nullopt;
+      } else {
+        return !value_.has_value();
+      }
+    }
+
+    return false;
+  }
+
+  std::optional<bool> IsWhitespaceInternal() {
+    if constexpr (std::is_same_v<T, std::string> ||
+                  std::is_same_v<T, std::string_view>) {
+      return value_.empty() ||
+             std::all_of(value_.begin(), value_.end(), ::isspace);
+    } else if constexpr (std::is_same_v<T, std::optional<std::string>> ||
+                         std::is_same_v<T, std::optional<std::string_view>>) {
+      return !value_.has_value() || value_->empty() ||
+             std::all_of(value_->begin(), value_->end(), ::isspace);
+    }
+
+    return false;
+  }
 };
 
+/// @brief NVM Fluent Validator with integrated multi chained validating process
+/// & validation result support with list of error code and custom message. This
+/// class designed to be fluent template based validator with general commonly
+/// validation cases and flexible custom lambda support.
 class NvValidator {
  public:
   NvValidator() noexcept = default;
 
-  template <typename T>
-  Validator<T> Validate(const std::string& key, const T& value,
-                        bool must_be_valid = true,
-                        std::optional<int> error_code = std::nullopt,
-                        const std::string& message = "Invalid value") {
+  template <typename TVal>
+  Validator<TVal> Validate(const std::string& key, const TVal& value,
+                           bool must_be_valid = true,
+                           std::optional<int> error_code = std::nullopt,
+                           const std::string& message = "Invalid value") {
     if (!keys_.insert(key).second) {
       throw std::runtime_error("Duplicate key: " + key);
     }
-    return Validator<T>(key, value, tasks_, result_, must_be_valid);
+    return Validator<TVal>(key, value, tasks_, result_, must_be_valid);
   }
 
-  template <typename T>
-  Validator<std::optional<T>> Validate(
-      const std::string& key, const std::optional<T>& value,
+  template <typename TVal>
+  Validator<std::optional<TVal>> Validate(
+      const std::string& key, const std::optional<TVal>& value,
       bool must_be_valid = true, std::optional<int> error_code = std::nullopt,
       const std::string& message = "Invalid value") {
     if (!keys_.insert(key).second) {
       throw std::runtime_error("Duplicate key: " + key);
     }
-    return Validator<std::optional<T>>(key, value, tasks_, result_,
-                                       must_be_valid);
+    return Validator<std::optional<TVal>>(key, value, tasks_, result_,
+                                          must_be_valid);
   }
 
   const ValidationResult& ValidateAll() noexcept {

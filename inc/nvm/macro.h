@@ -20,6 +20,8 @@
 #ifndef NVM_CORE_V2_MACRO_H
 #define NVM_CORE_V2_MACRO_H
 
+#include "nvm/types/type_utility.h"
+
 namespace nvm {
 
 #define NVM_ENUMCLASS_ENABLE_BITMASK_OPERATORS(T)                        \
@@ -52,6 +54,61 @@ namespace nvm {
   inline std::ostream &operator<<(std::ostream &os, E e) {               \
     return os << static_cast<typename std::underlying_type<E>::type>(e); \
   }
+
+#define NVM_ASSERT_VALID_STRING_TYPE(T)                                   \
+  static_assert(                                                          \
+      nvm::types::utility::is_string_and_string_view_v<T>() ||            \
+          nvm::types::utility::is_string_and_string_view_optional_v<T>(), \
+      "T must be in one of std::string, std::string_view, "               \
+      "std::optional<std::string>, "                                      \
+      "or std::optional<std::string_view> type");
+
+#define NVM_ASSERT_VALID_STRING_SPTR_TYPE(T)                                \
+  static_assert(                                                            \
+      nvm::types::utility::is_string_and_string_view_v<T>() ||              \
+          nvm::types::utility::is_string_and_string_view_optional_v<T>() || \
+          nvm::types::utility::is_string_and_string_view_smart_ptr_v<T>(),  \
+      "T must be in one of std::string, std::string_view, "                 \
+      "std::optional<std::string>, "                                        \
+      "or std::optional<std::string_view> and smart_ptr of the families "   \
+      "type");
+
+#define NVM_ASSERT_VALID_NULLABLE_OR_EMPTY_TYPE(T)                            \
+  static_assert(                                                              \
+      nvm::types::utility::is_string_and_string_view_v<T>() ||                \
+          nvm::types::utility::is_string_and_string_view_optional_v<T>() ||   \
+          nvm::types::utility::is_string_and_string_view_smart_ptr_v<T>() ||  \
+          std::is_same_v<T, std::optional<T>> ||                              \
+          nvm::types::utility::is_smart_ptr_v<T>(),                           \
+      "T must be in one of std::string, std::string_view, std::optional<T>, " \
+      "std::unique_ptr<T>, std::shared_ptr<T>, std::weak_ptr<T>, or a raw "   \
+      "pointer type");
+
+#define NVM_ASSERT_VALID_NULLABLE_TYPE(T)                                      \
+  static_assert(std::is_same_v<T, std::optional<T>> ||                         \
+                    nvm::types::utility::is_smart_ptr_v<T>(),                  \
+                "T must be in one of std::unique_ptr<T>, std::shared_ptr<T>, " \
+                "std::weak_ptr<T> or std::optional<T> type");
+
+#define NVM_ASSERT_VALID_LOGICAL_COMPAREABLE_TYPE(T)                   \
+  static_assert(nvm::types::utility::is_logical__comparable<T>::value, \
+                "Type T must support all comparison operators: "       \
+                "<, >, <=, >=, ==, !=");
+
+#define NVM_ASSERT_VALID_LOGICAL_EQ_NEQ_TYPE(T)                    \
+  static_assert(nvm::types::utility::is_logical__eq_neq<T>::value, \
+                "Type T must support all comparison operators: "   \
+                "==, !=");
+
+#define NVM_ASSERT_VALID_LOGICAL_LT_GT_TYPE(T)                         \
+  static_assert(nvm::types::utility::is_logical__comparable<T>::value, \
+                "Type T must support all comparison operators: "       \
+                "<, >");
+
+#define NVM_ASSERT_VALID_LOGICAL_LTE_GTE_TYPE(T)                       \
+  static_assert(nvm::types::utility::is_logical__comparable<T>::value, \
+                "Type T must support all comparison operators: "       \
+                "<=, =>");
 
 }  // namespace nvm
 #endif
