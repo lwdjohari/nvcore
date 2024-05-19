@@ -104,7 +104,7 @@ class JoinDef {
       : subquery_str_(),
         subsquery_str_alias_(),
         subquery_field_key_(),
-        subquery_obj_(std::make_unique<SelectBlock<TParameterType>>(
+        subquery_obj_(std::make_shared<SelectBlock<TParameterType>>(
             std::forward<SelectBlock<TParameterType>>(subquery))),
         left_table_(std::forward<RecordKey>(existing_table)),
         right_table_(RecordKey()),
@@ -152,7 +152,7 @@ class JoinDef {
   std::string subquery_str_;
   std::string subsquery_str_alias_;
   std::string subquery_field_key_;
-  mutable std::unique_ptr<SelectBlock<TParameterType>> subquery_obj_;
+  mutable std::shared_ptr<SelectBlock<TParameterType>> subquery_obj_;
   RecordKey left_table_;
   RecordKey right_table_;
   SqlJoinType join_type_;
@@ -313,7 +313,7 @@ class JoinBlock {
  private:
   SelectBlock<TParameterType>& parent_;
   std::vector<JoinDef<TParameterType>> joins_;
-  std::unique_ptr<SelectBlock<TParameterType>> subquery_;
+  // std::unique_ptr<SelectBlock<TParameterType>> subquery_;
   uint32_t current_parameter_index_;
   uint32_t level_;
 
@@ -321,7 +321,7 @@ class JoinBlock {
   explicit JoinBlock(SelectBlock<TParameterType>& parent, uint32_t level)
       : parent_(parent),
         joins_(),
-        subquery_(nullptr),
+        // subquery_(nullptr),
         current_parameter_index_(),
         level_(level) {}
 
@@ -425,14 +425,14 @@ class JoinBlock {
     return *this;
   }
 
-  SelectBlock<TParameterType>& JoinWithSubquery(SqlJoinType join_type) {
-    if (!subquery_) {
-      subquery_ = std::make_shared<SelectBlock<TParameterType>>(
-          parent_.GetCurrentParamIndex());
-    }
+  // SelectBlock<TParameterType>& JoinWithSubquery(SqlJoinType join_type) {
+  //   if (!subquery_) {
+  //     subquery_ = std::make_shared<SelectBlock<TParameterType>>(
+  //         parent_.GetCurrentParamIndex());
+  //   }
 
-    return subquery_;
-  }
+  //   return subquery_;
+  // }
 };
 
 struct FromTable {
@@ -456,11 +456,19 @@ class FromTableBlock {
  private:
   SelectBlock<TParameterType>& parent_;
   std::vector<FromTable> tables_;
+  std::vector<SelectBlock<TParameterType>> subqueries_;
   uint32_t level_;
+  uint32_t last_current_index_returned_;
 
  public:
   explicit FromTableBlock(SelectBlock<TParameterType>& parent, uint32_t level)
-      : parent_(parent), tables_(), level_(level) {}
+      : parent_(parent),
+        tables_(),
+        subqueries_(),
+        level_(uint32_t(level)),
+        last_current_index_returned_() {}
+
+  ~FromTableBlock() {}
 
   FromTableBlock& AddTable(FromTable&& table) {
     tables_.emplace_back(std::forward<FromTable>(table));
@@ -474,14 +482,38 @@ class FromTableBlock {
     return *this;
   }
 
+  uint32_t GetCurrentParameterIndex() const {
+    return last_current_index_returned_;
+  }
+
+  uint32_t __GetCurrentParameterIndexFromParent(
+      const SelectBlock<TParameterType>& select) const;
+
+  void __CreateNewSelectBlock(std::vector<SelectBlock<TParameterType>>& selects,
+                              uint32_t index, uint32_t level,
+                              const std::string& table_alias);
+
+  std::string __GenerateSelectQuery(const SelectBlock<TParameterType>& selects,
+                                    bool pretty_print) const;
+
+  SelectBlock<TParameterType>& AddSubquery(const std::string& table_alias);
+
+  FromTableBlock& EndSubquery() { return *this; }
+
   SelectBlock<TParameterType>& Reset() {
+    subqueries_.clear();
     tables_.clear();
+    last_current_index_returned_ = 0;
     return parent_;
   }
 
   bool Empty() const { return tables_.empty(); }
 
-  SelectBlock<TParameterType>& EndFromTableBlock() { return parent_; }
+  SelectBlock<TParameterType>& EndFromTableBlock() {
+    // std::cout << "LEVEL:" << level_ << std::endl;
+    // std::cout << &parent_ << std::endl;
+    return parent_;
+  }
 
   std::string GenerateQuery(bool pretty_print = false) const {
     std::ostringstream query;
@@ -494,6 +526,14 @@ class FromTableBlock {
             << tables_[i].BuildTableName();
 
       first_element = false;
+    }
+
+    if (!subqueries_.empty()) {
+      for (auto& s : subqueries_) {
+        if (!first_element)
+          query << (pretty_print ? ",\n" : ", ")
+                << __GenerateSelectQuery(s, pretty_print);
+      }
     }
     return query.str();
   }
@@ -638,6 +678,8 @@ class SelectBlock {
   FromTableBlock<TParameterType> from_table_;
   std::vector<FieldDef<TParameterType>> fields_;
   std::vector<TParameterType> parameter_values_;
+  FromTableBlock<TParameterType>* subquery_from_parent_;
+  std::string table_alias_;
 
  public:
   explicit SelectBlock(uint32_t current_param_index)
@@ -646,19 +688,35 @@ class SelectBlock {
         join_blocks_(),
         from_table_(*this, level_),
         fields_(),
-        parameter_values_() {}
+        parameter_values_(),
+        subquery_from_parent_(nullptr),
+        table_alias_() {}
 
   explicit SelectBlock(uint32_t current_param_index, uint32_t level)
       : current_param_index_(current_param_index),
         level_(level),
         join_blocks_(),
-        from_table_(*this),
+        from_table_(*this, level),
         fields_(),
-        parameter_values_() {}
+        parameter_values_(),
+        subquery_from_parent_(nullptr),
+        table_alias_() {}
+
+  explicit SelectBlock(uint32_t current_param_index, uint32_t level,
+                       FromTableBlock<TParameterType>* from_obj,
+                       const std::string& table_alias)
+      : current_param_index_(current_param_index),
+        level_(level),
+        join_blocks_(),
+        from_table_(*this, level),
+        fields_(),
+        parameter_values_(),
+        subquery_from_parent_(from_obj),
+        table_alias_(std::string(table_alias)) {}
 
   ~SelectBlock() {}
 
-  uint32_t GetCurrentParamIndex() { return current_param_index_; }
+  uint32_t GetCurrentParamIndex() const { return current_param_index_; }
 
   void SetCurrentParamIndex(uint32_t current_param_index) {
     current_param_index_ = current_param_index;
@@ -706,13 +764,35 @@ class SelectBlock {
     return *this;
   }
 
-  FromTableBlock<TParameterType>& From() { return from_table_; }
+  FromTableBlock<TParameterType>& EndSubqueryInsideFrom() {
+    if (!subquery_from_parent_)
+      throw std::runtime_error("Call this only from .From().EndFromSubquery()");
+
+    return *subquery_from_parent_;
+
+    // return from_table_;
+  }
+
+  FromTableBlock<TParameterType>& From() {
+    try {
+      return from_table_;
+    } catch (const std::exception& e) {
+      std::cerr << e.what() << '\n';
+      throw e;
+    }
+  }
 
   SelectBlock& EndBlock() { return *this; }
 
   JoinBlock<TParameterType>& CreateJoinBlock() {
-    join_blocks_.emplace_back(*this, level_);
-    return join_blocks_.back();
+    try {
+      join_blocks_.emplace_back(*this, level_);
+      return join_blocks_.back();
+    } catch (const std::exception& e) {
+      std::cout << "Create JOINBLOCK_FAILED [" << level_ << "]: " << e.what()
+                << std::endl;
+      throw e;
+    }
   }
 
   // SelectBlock& FnCall(const std::string& fn_name,
@@ -753,9 +833,15 @@ class SelectBlock {
 
   std::string GenerateQuery(bool pretty_print = false) const {
     std::ostringstream query;
+
+    std::string opening_bracket = subquery_from_parent_ != nullptr ? "(" : "";
+    std::string closed_bracket = subquery_from_parent_ != nullptr ? ")" : "";
+    std::string table_alias =
+        subquery_from_parent_ != nullptr ? table_alias_ : "";
     // SELECT
-    query << (pretty_print ? GenerateIndentation(level_) + "SELECT \n"
-                           : "SELECT ");
+    query << (pretty_print
+                  ? GenerateIndentation(level_) + opening_bracket + "SELECT \n"
+                  : "SELECT ");
     bool first_element = true;
     for (const auto& field : fields_) {
       if (!first_element) query << (pretty_print ? ", \n" : ", ");
@@ -786,6 +872,8 @@ class SelectBlock {
     // LIMIT
 
     // RESULT
+    query << (pretty_print ? GenerateIndentation(level_) : "") << closed_bracket
+          << (table_alias.empty() ? "" : " AS " + table_alias);
     return query.str();
   }
 
@@ -809,6 +897,40 @@ template <typename TParameterType>
 std::string JoinBlock<TParameterType>::__GenerateSelectBlock(
     const SelectBlock<TParameterType>& select) {
   return select.GenerateQuery();
+}
+
+template <typename TParameterType>
+uint32_t FromTableBlock<TParameterType>::__GetCurrentParameterIndexFromParent(
+    const SelectBlock<TParameterType>& select) const {
+  return select.GetCurrentParamIndex();
+}
+
+template <typename TParameterType>
+SelectBlock<TParameterType>& FromTableBlock<TParameterType>::AddSubquery(
+    const std::string& table_alias) {
+  uint32_t index;
+  if (subqueries_.empty()) {
+    index = __GetCurrentParameterIndexFromParent(parent_);
+  } else {
+    auto last = &subqueries_.back();
+    index = __GetCurrentParameterIndexFromParent(*last);
+  }
+
+  __CreateNewSelectBlock(subqueries_, index, level_ + 1, table_alias);
+  return subqueries_.back();
+}
+
+template <typename TParameterType>
+void FromTableBlock<TParameterType>::__CreateNewSelectBlock(
+    std::vector<SelectBlock<TParameterType>>& selects, uint32_t index,
+    uint32_t level, const std::string& table_alias) {
+  selects.emplace_back(index, level, this, table_alias);
+}
+
+template <typename TParameterType>
+std::string FromTableBlock<TParameterType>::__GenerateSelectQuery(
+    const SelectBlock<TParameterType>& select, bool pretty_print) const {
+  return select.GenerateQuery(pretty_print);
 }
 
 }  // namespace nvm::containers
