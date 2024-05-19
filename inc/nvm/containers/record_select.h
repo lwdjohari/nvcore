@@ -498,7 +498,7 @@ class FromTableBlock {
 
   SelectBlock<TParameterType>& AddSubquery(const std::string& table_alias);
 
-  FromTableBlock& EndSubquery() { return *this; }
+  
 
   SelectBlock<TParameterType>& Reset() {
     subqueries_.clear();
@@ -764,6 +764,10 @@ class SelectBlock {
     return *this;
   }
 
+  /// @brief End of Subquery inside From statement [Match:
+  /// From().AddSubquery()]. When use on root level will thrown std::runtime
+  /// error.
+  /// @return
   FromTableBlock<TParameterType>& EndSubqueryInsideFrom() {
     if (!subquery_from_parent_)
       throw std::runtime_error("Call this only from .From().EndFromSubquery()");

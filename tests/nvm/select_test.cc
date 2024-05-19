@@ -53,7 +53,7 @@ TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
             RecordKey("group","group_id","ad_g"))
         .EndJoinBlock()
       .EndSubqueryInsideFrom()
-      .EndFromTableBlock()
+    .EndFromTableBlock()
     .CreateJoinBlock()
       .InnerJoin(
         RecordKey("equipment","equipment_type_id","e"),
@@ -79,7 +79,7 @@ TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
       .InnerJoin(
         RecordKey("equipment","equipment_id","e"),
         RecordKey("ad","equipment_id","ad"))
-     .EndJoinBlock()
+    .EndJoinBlock()
     .EndBlock();
   // clang-format on
 
