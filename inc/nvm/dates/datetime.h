@@ -32,6 +32,62 @@
 
 namespace nvm::dates {
 
+struct DateTimePart {
+  // Year as a signed integer (to handle BCE years if ever necessary)
+  int32_t year;
+  // Month as an unsigned integer (1-12)
+  uint8_t month;
+  // Day of the month as an unsigned integer (1-31)
+  uint8_t day;
+  // Hour of the day as an unsigned integer (0-23)
+  uint8_t hour;
+  // Minute of the hour as an unsigned integer (0-59)
+  uint8_t minute;
+  // Second of the minute as an unsigned integer (0-59)
+  uint8_t second;
+  // Indicates whether daylight saving time is in
+  // effect
+  bool is_daylight_saving;
+  // UTC offset in seconds
+  // Indicates whether the year is a leap year
+  bool is_leap_year;
+  std::chrono::seconds offset;
+  // Milliseconds part of the second (0-999)
+  uint16_t millisecond;
+  // Nanoseconds part of the second (0-999999999)
+  uint32_t nanosecond;
+
+  DateTimePart()
+      : year(),
+        month(),
+        day(),
+        hour(),
+        minute(),
+        second(),
+        is_daylight_saving(),
+        is_leap_year(),
+        offset(),
+        millisecond(),
+        nanosecond() {}
+
+  explicit DateTimePart(int32_t year, uint8_t month, uint8_t day, uint8_t hour,
+                        uint8_t minute, uint8_t second, uint16_t millisecond,
+                        uint32_t nanosecond, const std::chrono::seconds& offset,
+                        bool is_daylight_saving, bool is_leap_year)
+      : year(year),
+        month(month),
+        day(day),
+        hour(hour),
+        minute(minute),
+        second(second),
+        is_daylight_saving(is_daylight_saving),
+        is_leap_year(is_leap_year),
+        offset(std::chrono::seconds(offset)),
+        millisecond(millisecond),
+        nanosecond(nanosecond) {}
+};
+
+namespace details {
 [[nodiscard]] inline auto ToTzTime(
     const std::chrono::system_clock::time_point& time) {
   auto z = date::current_zone();
@@ -108,88 +164,12 @@ namespace nvm::dates {
                   date::current_zone()->name());
 }
 
-/// @brief Get Timezone Info
-/// @param tz_name IANA Timezone name
-/// @return
-[[nodiscard]] inline const date::time_zone* GetTimezone(
-    const std::string& tz_name) {
-  auto z = date::locate_zone(tz_name);
-  if (!z) {
-    throw std::runtime_error("No timezone with name " + tz_name + " is found");
-  }
-  return z;
-}
-
 [[nodiscard]] inline auto Now() {
   return ToTzTime(std::chrono::system_clock::now());
 }
 
 [[nodiscard]] inline auto UtcNow() {
   return ToTzTime("Etc/Utc", std::chrono::system_clock::now());
-}
-
-struct DateTimePart {
-  // Year as a signed integer (to handle BCE years if ever necessary)
-  int32_t year;
-  // Month as an unsigned integer (1-12)
-  uint8_t month;
-  // Day of the month as an unsigned integer (1-31)
-  uint8_t day;
-  // Hour of the day as an unsigned integer (0-23)
-  uint8_t hour;
-  // Minute of the hour as an unsigned integer (0-59)
-  uint8_t minute;
-  // Second of the minute as an unsigned integer (0-59)
-  uint8_t second;
-  // Indicates whether daylight saving time is in
-  // effect
-  bool is_daylight_saving;
-  // UTC offset in seconds
-  // Indicates whether the year is a leap year
-  bool is_leap_year;
-  std::chrono::seconds offset;
-  // Milliseconds part of the second (0-999)
-  uint16_t millisecond;
-  // Nanoseconds part of the second (0-999999999)
-  uint32_t nanosecond;
-
-  DateTimePart()
-      : year(),
-        month(),
-        day(),
-        hour(),
-        minute(),
-        second(),
-        is_daylight_saving(),
-        is_leap_year(),
-        offset(),
-        millisecond(),
-        nanosecond() {}
-
-  explicit DateTimePart(int32_t year, uint8_t month, uint8_t day, uint8_t hour,
-                        uint8_t minute, uint8_t second, uint16_t millisecond,
-                        uint32_t nanosecond, const std::chrono::seconds& offset,
-                        bool is_daylight_saving, bool is_leap_year)
-      : year(year),
-        month(month),
-        day(day),
-        hour(hour),
-        minute(minute),
-        second(second),
-        is_daylight_saving(is_daylight_saving),
-        is_leap_year(is_leap_year),
-        offset(std::chrono::seconds(offset)),
-        millisecond(millisecond),
-        nanosecond(nanosecond) {}
-};
-
-/// @brief Safe cast chrono::duration to chrono::nanoseconds
-/// @tparam T std::chrono duration
-/// @param value
-template <typename T = std::chrono::seconds>
-[[nodiscard]] inline std::chrono::nanoseconds ToNanosecondDuration(
-    const T& value) {
-  return std::chrono::duration_cast<std::chrono::nanoseconds>(value);
 }
 
 [[nodiscard]] inline DateTimePart GetDateTimePart(
@@ -225,6 +205,29 @@ template <typename T = std::chrono::seconds>
   return part;
 }
 
+}  // namespace details
+
+/// @brief Get Timezone Info
+/// @param tz_name IANA Timezone name
+/// @return
+[[nodiscard]] inline const date::time_zone* GetTimezone(
+    const std::string& tz_name) {
+  auto z = date::locate_zone(tz_name);
+  if (!z) {
+    throw std::runtime_error("No timezone with name " + tz_name + " is found");
+  }
+  return z;
+}
+
+/// @brief Safe cast chrono::duration to chrono::nanoseconds
+/// @tparam T std::chrono duration
+/// @param value
+template <typename T = std::chrono::seconds>
+[[nodiscard]] inline std::chrono::nanoseconds ToNanosecondDuration(
+    const T& value) {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(value);
+}
+
 /// @brief Class for handling datetime with or without timezone, the underlying
 /// implementations are rely to the Howard Hinnant date library.
 class DateTime {
@@ -254,8 +257,8 @@ class DateTime {
   DateTime()
       : time_(std::make_shared<date::zoned_time<std::chrono::nanoseconds,
                                                 const date::time_zone*>>(
-            dates::Now())),
-        part_(std::make_shared<DateTimePart>(GetDateTimePart(*time_))){};
+            dates::details::Now())),
+        part_(std::make_shared<DateTimePart>(dates::details::GetDateTimePart(*time_))){};
 
   /// @brief Copy/clone DateTime object
   /// @param other source of DateTime object to copy
@@ -263,15 +266,15 @@ class DateTime {
       : time_(std::make_shared<date::zoned_time<std::chrono::nanoseconds,
                                                 const date::time_zone*>>(
             *other.TzTime())),
-        part_(std::make_shared<DateTimePart>(GetDateTimePart(*time_))) {}
+        part_(std::make_shared<DateTimePart>(dates::details::GetDateTimePart(*time_))) {}
 
   /// @brief Create DateTime object with Now() value with specific timezone.
   /// @param tz_name IANA timezone name
   explicit DateTime(const std::string& tz_name)
       : time_(std::make_shared<date::zoned_time<std::chrono::nanoseconds,
                                                 const date::time_zone*>>(
-            ToTzTime(GetTimezone(tz_name), std::chrono::system_clock::now()))),
-        part_(std::make_shared<DateTimePart>(GetDateTimePart(*time_))) {}
+            dates::details::ToTzTime(GetTimezone(tz_name), std::chrono::system_clock::now()))),
+        part_(std::make_shared<DateTimePart>(dates::details::GetDateTimePart(*time_))) {}
 
   /// @brief Create DateTime with custom date and time with current host
   /// timezone.
@@ -286,8 +289,8 @@ class DateTime {
                     uint8_t minutes, uint8_t second, uint16_t milisecond)
       : time_(std::make_shared<date::zoned_time<std::chrono::nanoseconds,
                                                 const date::time_zone*>>(
-            ToTzTime(year, month, day, hour, minutes, second, milisecond))),
-        part_(std::make_shared<DateTimePart>(GetDateTimePart(*time_))) {}
+            dates::details::ToTzTime(year, month, day, hour, minutes, second, milisecond))),
+        part_(std::make_shared<DateTimePart>(dates::details::GetDateTimePart(*time_))) {}
 
   /// @brief Create DateTime with custom date and time with specified IANA
   /// Timezone.
@@ -304,9 +307,9 @@ class DateTime {
                     const std::string& tz_name)
       : time_(std::make_shared<date::zoned_time<std::chrono::nanoseconds,
                                                 const date::time_zone*>>(
-            ToTzTime(year, month, day, hour, minutes, second, milisecond,
+            dates::details::ToTzTime(year, month, day, hour, minutes, second, milisecond,
                      tz_name))),
-        part_(std::make_shared<DateTimePart>(GetDateTimePart(*time_))) {}
+        part_(std::make_shared<DateTimePart>(dates::details::GetDateTimePart(*time_))) {}
 
   /// @brief Create DateTime with custom date and time set to 00:00 (midnight)
   /// with current host timezone.
@@ -316,8 +319,8 @@ class DateTime {
   explicit DateTime(int32_t year, uint8_t month, uint8_t day)
       : time_(std::make_shared<date::zoned_time<std::chrono::nanoseconds,
                                                 const date::time_zone*>>(
-            ToTzTime(year, month, day, 0, 0, 0, 0))),
-        part_(std::make_shared<DateTimePart>(GetDateTimePart(*time_))) {}
+            dates::details::ToTzTime(year, month, day, 0, 0, 0, 0))),
+        part_(std::make_shared<DateTimePart>(dates::details::GetDateTimePart(*time_))) {}
 
   /// @brief Create DateTime with custom date and time set to 00:00 (midnight)
   /// with specified IANA Timezone.
@@ -328,8 +331,8 @@ class DateTime {
                     const std::string& tz_name)
       : time_(std::make_shared<date::zoned_time<std::chrono::nanoseconds,
                                                 const date::time_zone*>>(
-            ToTzTime(year, month, day, 0, 0, 0, 0, tz_name))),
-        part_(std::make_shared<DateTimePart>(GetDateTimePart(*time_))) {}
+            dates::details::ToTzTime(year, month, day, 0, 0, 0, 0, tz_name))),
+        part_(std::make_shared<DateTimePart>(dates::details::GetDateTimePart(*time_))) {}
 
   /// @brief Create DateTime object from `std::chrono::system_clock::time_point`
   /// with host timezone.
@@ -337,8 +340,8 @@ class DateTime {
   explicit DateTime(const std::chrono::system_clock::time_point& time)
       : time_(std::make_shared<date::zoned_time<std::chrono::nanoseconds,
                                                 const date::time_zone*>>(
-            ToTzTime(time))),
-        part_(std::make_shared<DateTimePart>(GetDateTimePart(*time_))) {}
+            dates::details::ToTzTime(time))),
+        part_(std::make_shared<DateTimePart>(dates::details::GetDateTimePart(*time_))) {}
 
   /// @brief Create DateTime object from `std::chrono::system_clock::time_point`
   /// and specified IANA Timezone.
@@ -348,8 +351,8 @@ class DateTime {
                     const std::string& tz_name)
       : time_(std::make_shared<date::zoned_time<std::chrono::nanoseconds,
                                                 const date::time_zone*>>(
-            ToTzTime(GetTimezone(tz_name), time))),
-        part_(std::make_shared<DateTimePart>(GetDateTimePart(*time_))) {}
+            dates::details::ToTzTime(GetTimezone(tz_name), time))),
+        part_(std::make_shared<DateTimePart>(dates::details::GetDateTimePart(*time_))) {}
 
   explicit DateTime(date::zoned_time<std::chrono::nanoseconds,
                                      const date::time_zone*>&& time_tz)
@@ -357,7 +360,7 @@ class DateTime {
                                                 const date::time_zone*>>(
             std::forward<date::zoned_time<std::chrono::nanoseconds,
                                           const date::time_zone*>>(time_tz))),
-        part_(std::make_shared<DateTimePart>(GetDateTimePart(*time_))) {}
+        part_(std::make_shared<DateTimePart>(dates::details::GetDateTimePart(*time_))) {}
 
   ~DateTime() {}
 
@@ -543,7 +546,9 @@ class DateTime {
   }
 };
 
-enum class DateTimeCalculateSpanType : uint8_t {
+namespace details
+{
+  enum class DateTimeCalculateSpanType : uint8_t {
   DurationAdd = 0,
   DurationSubtract = 1,
 };
@@ -581,32 +586,49 @@ inline std::optional<std::chrono::nanoseconds> CalculateDurationBetween(
   auto duration = dt1.TzTime()->get_sys_time() - dt2.TzTime()->get_sys_time();
   return duration;
 }
+} // namespace details
 
-// Overloading the + operator to add duration to DateTime
-inline DateTime operator+(const DateTime& dt,
-                          const std::chrono::nanoseconds& duration) {
-  return CalculateDurationSpan(dt, duration,
-                               DateTimeCalculateSpanType::DurationAdd);
-}
 
-// Overloading the - operator to subtract duration from DateTime
-inline DateTime operator-(const DateTime& dt,
-                          const std::chrono::nanoseconds& duration) {
-  return CalculateDurationSpan(dt, duration,
-                               DateTimeCalculateSpanType::DurationSubtract);
-}
 
-// Overloading the - operator to subtract DateTime and DateTime object
-inline std::optional<std::chrono::nanoseconds> operator-(const DateTime& lv,
-                                                         const DateTime& rv) {
-  return CalculateDurationBetween(lv, rv);
-}
-
+/// @brief
+/// @param value
+/// @return
 [[nodiscard]] inline std::optional<std::string> ToIso8601Optional(
     const std::optional<DateTime>& value) {
   return value.has_value() ? static_cast<std::string>(value.value())
                            : std::optional<std::string>(std::nullopt);
 }
+
+/// @brief Overloading the + operator to add duration to DateTime
+/// @param dt
+/// @param duration
+/// @return
+inline DateTime operator+(const DateTime& dt,
+                          const std::chrono::nanoseconds& duration) {
+  return dates::details::CalculateDurationSpan(dt, duration,
+                               dates::details::DateTimeCalculateSpanType::DurationAdd);
+}
+
+/// @brief Overloading the - operator to subtract duration from DateTime
+/// @param dt
+/// @param duration
+/// @return
+inline DateTime operator-(const DateTime& dt,
+                          const std::chrono::nanoseconds& duration) {
+  return dates::details::CalculateDurationSpan(dt, duration,
+                               dates::details::DateTimeCalculateSpanType::DurationSubtract);
+}
+
+/// @brief Overloading the - operator to subtract DateTime and DateTime object
+/// @param lv
+/// @param rv
+/// @return
+inline std::optional<std::chrono::nanoseconds> operator-(const DateTime& lv,
+                                                         const DateTime& rv) {
+  return dates::details::CalculateDurationBetween(lv, rv);
+}
+
+
 
 }  // namespace nvm::dates
 #endif
