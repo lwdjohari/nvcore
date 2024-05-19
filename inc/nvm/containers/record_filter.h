@@ -33,54 +33,6 @@
 
 namespace nvm::containers {
     
-enum class SqlOperator {
-  kEqual,
-  kNotEqual,
-  kLess,
-  kLessOrEqual,
-  kGreater,
-  kGreaterOrEqual,
-  kLike,
-  kBetween,
-  kIn
-};
-enum class LogicOperator { kAnd, kOr };
-
-std::string SqlOperatorToString(SqlOperator op) {
-  switch (op) {
-    case SqlOperator::kEqual:
-      return "=";
-    case SqlOperator::kNotEqual:
-      return "!=";
-    case SqlOperator::kLess:
-      return "<";
-    case SqlOperator::kLessOrEqual:
-      return "<=";
-    case SqlOperator::kGreater:
-      return ">";
-    case SqlOperator::kGreaterOrEqual:
-      return ">=";
-    case SqlOperator::kLike:
-      return "LIKE";
-    case SqlOperator::kBetween:
-      return "BETWEEN";
-    case SqlOperator::kIn:
-      return "IN";
-    default:
-      return "";
-  }
-}
-
-std::string LogicOperatorToString(LogicOperator logic) {
-  switch (logic) {
-    case LogicOperator::kAnd:
-      return " AND ";
-    case LogicOperator::kOr:
-      return " OR ";
-    default:
-      return "";
-  }
-}
 
 template <typename T>
 class Condition {

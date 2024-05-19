@@ -17,6 +17,7 @@ set(TEST_SOURCES
     datetime_test.cc
     record_test.cc
     validation_test.cc
+    select_test.cc
     # Add more test files if needed
 )
 

@@ -59,6 +59,72 @@ NVM_ENUM_CLASS_DISPLAY_TRAIT(FieldPinMode)
 enum class SortType : uint16_t { Ascending = 0, Descending = 1 };
 
 NVM_ENUM_CLASS_DISPLAY_TRAIT(SortType)
+
+enum class SqlOperator {
+  kEqual,
+  kNotEqual,
+  kLess,
+  kLessOrEqual,
+  kGreater,
+  kGreaterOrEqual,
+  kLike,
+  kBetween,
+  kIn
+};
+
+NVM_ENUM_CLASS_DISPLAY_TRAIT(SqlOperator)
+
+enum class LogicOperator { kAnd, kOr };
+
+NVM_ENUM_CLASS_DISPLAY_TRAIT(LogicOperator)
+
+inline std::string SqlOperatorToString(SqlOperator op) {
+  switch (op) {
+    case SqlOperator::kEqual:
+      return "=";
+    case SqlOperator::kNotEqual:
+      return "!=";
+    case SqlOperator::kLess:
+      return "<";
+    case SqlOperator::kLessOrEqual:
+      return "<=";
+    case SqlOperator::kGreater:
+      return ">";
+    case SqlOperator::kGreaterOrEqual:
+      return ">=";
+    case SqlOperator::kLike:
+      return "LIKE";
+    case SqlOperator::kBetween:
+      return "BETWEEN";
+    case SqlOperator::kIn:
+      return "IN";
+    default:
+      return "";
+  }
+}
+
+inline std::string LogicOperatorToString(LogicOperator logic) {
+  switch (logic) {
+    case LogicOperator::kAnd:
+      return " AND ";
+    case LogicOperator::kOr:
+      return " OR ";
+    default:
+      return "";
+  }
+}
+
+inline std::string GenerateIndentation(uint32_t level, char indent_char = ' ',
+                                       uint32_t number_per_print = 2) {
+  if (level == 0) return std::string();
+  int32_t n = number_per_print * level;
+  std::ostringstream oss;
+  for (int i = 0; i < n; ++i) {
+    oss << indent_char;
+  }
+  return oss.str();
+}
+
 }  // namespace nvm::containers
 
 #endif
