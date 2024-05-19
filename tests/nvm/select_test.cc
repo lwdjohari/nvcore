@@ -14,10 +14,11 @@ TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
   using SqlOperator = nvm::containers::SqlOperator;
   using RecordKey = nvm::containers::RecordKey;
   using SqlAggregateFn = nvm::containers::SqlAggregateFunction;
-  SelectBlock select(1);
+  auto select =std::make_unique<SelectBlock>(1);
   // clang-format off
-
-  select
+  std::cout << "NvSelect size:" << sizeof(*select) << std::endl;
+  std::cout << "NvSelect ptr-size:" << sizeof(select) << std::endl;
+  (*select)
     .Field<int32_t>("equipment_id","e",SqlAggregateFn::Distinct)
     .Field<int32_t>("company_id","c")
     .Field<int32_t>("service_id","s")
@@ -82,8 +83,8 @@ TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
     .EndBlock();
   // clang-format on
 
-  auto output = select.GenerateQuery();
-  std::cout << select.GenerateQuery(true) << std::endl;
+  auto output = select->GenerateQuery();
+  std::cout << select->GenerateQuery(true) << std::endl;
 
   std::string result =
       "SELECT DISTINCT e.equipment_id, c.company_id, s.service_id, "
