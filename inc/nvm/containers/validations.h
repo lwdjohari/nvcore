@@ -147,6 +147,8 @@ class Validator {
         } else if constexpr (nvm::types::utility::
                                  is_string_and_string_view_smart_ptr_v<T>()) {
           is_empty = !value_ || value_->empty();
+        } else if constexpr (nvm::types::utility::is_smart_ptr_v<T>()) {
+          is_empty = !value_;
         } else if constexpr (std::is_pointer_v<T>) {
           is_empty = !value_;
         }

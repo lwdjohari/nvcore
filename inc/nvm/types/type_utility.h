@@ -1,3 +1,23 @@
+/*
+ *  Copyright (c) 2024 Linggawasistha Djohari
+ *  <linggawasistha.djohari@outlook.com> Licensed to Linggawasistha Djohari
+ * under one or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information regarding copyright
+ * ownership.
+ *
+ *  Linggawasistha Djohari licenses this file to you under the Apache License,
+ *  Version 2.0 (the "License"); you may not use this file except in
+ *  compliance with the License. You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 #pragma once
 
 #include <optional>
@@ -22,15 +42,29 @@ struct is_smart_ptr<std::shared_ptr<T>> : std::true_type {};
 template <typename T>
 struct is_smart_ptr<std::weak_ptr<T>> : std::true_type {};
 
-// Helper variable template for convenience
+/// @brief Get is T smart pointer type
+/// @tparam T any type
+/// @return true if smart_ptr type
 template <typename T>
 constexpr bool is_smart_ptr_v() {
   return is_smart_ptr<T>::value;
 }
 
+/// @brief Get is T is raw pointer type
+/// @tparam T any type
+/// @return true if raw pointer type
 template <typename T>
-constexpr bool is_optional_v =
-    std::is_same_v<T, std::optional<typename T::value_type>>;
+constexpr bool is_raw_ptr_v(){
+    return std::is_pointer_v<T>;
+}
+
+/// @brief Get is T is std::optional<> type
+/// @tparam T any type
+/// @return true if std::optional<> type
+template <typename T>
+constexpr bool is_optional_v(){
+    return std::is_same_v<T, std::optional<T>>;
+}
 
 // Helper type traits to check if a comparison operator exists
 template <typename, typename = std::void_t<>>
@@ -105,32 +139,49 @@ template <typename T>
 using is_logical__lte_gte_comparator =
     std::conjunction<has_less_equal<T>, has_greater_equal<T>>;
 
+/// @brief 
+/// @tparam T 
+/// @return 
 template <typename T>
 constexpr bool is_string_and_string_view_v() {
   return (std::is_same_v<T, std::string> ||
           std::is_same_v<T, std::string_view>);
 }
 
+/// @brief 
+/// @tparam T 
+/// @return 
 template <typename T>
 constexpr bool is_string_and_string_view_optional_v() {
   return (std::is_same_v<T, std::optional<std::string>> ||
           std::is_same_v<T, std::optional<std::string_view>>);
 }
 
+/// @brief 
+/// @tparam T 
+/// @return 
 template <typename T>
 constexpr bool is_string_and_string_view_smart_ptr_v() {
   return (std::is_same_v<T, std::unique_ptr<std::string>> ||
           std::is_same_v<T, std::shared_ptr<std::string>> ||
+          std::is_same_v<T, std::weak_ptr<std::string>> ||
           std::is_same_v<T, std::unique_ptr<std::string_view>> ||
-          std::is_same_v<T, std::shared_ptr<std::string_view>>);
+          std::is_same_v<T, std::shared_ptr<std::string_view>> ||
+          std::is_same_v<T, std::weak_ptr<std::string_view>>);
 }
 
+/// @brief 
+/// @tparam T 
+/// @return 
 template <typename T>
 constexpr bool is_string_and_string_view_family_v() {
   return (is_string_and_string_view_v<T> ||
           is_string_and_string_view_optional_v<T>());
 }
 
+/// @brief 
+/// @tparam T 
+/// @return 
 template <typename T>
 constexpr bool is_string_and_string_view_family_ptr_v() {
   return (is_string_and_string_view_family_v<T>() ||
