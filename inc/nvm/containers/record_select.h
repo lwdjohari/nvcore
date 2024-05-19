@@ -755,8 +755,7 @@ class SelectBlock {
     std::ostringstream query;
     // SELECT
     query << (pretty_print ? GenerateIndentation(level_) + "SELECT \n"
-                           : "SELECT ")
-          << (pretty_print? "\n" : "");
+                           : "SELECT ");
     bool first_element = true;
     for (const auto& field : fields_) {
       if (!first_element) query << (pretty_print ? ", \n" : ", ");
