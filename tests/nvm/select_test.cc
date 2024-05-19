@@ -4,7 +4,7 @@
 
 #include "catch2/catch_all.hpp"
 #include "nvm/containers/record_select.h"
-
+#include "nvm/strings/utility.h"
 using namespace nvm;
 
 TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
@@ -65,13 +65,29 @@ TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
         RecordKey("users","user_id","um"))
       .EndJoinBlock()
     .EndBlock();
+  // clang-format on
 
-    std::cout << select.GenerateQuery(true) << std::endl;
+  auto output = select.GenerateQuery();
+  std::cout << select.GenerateQuery(true) << std::endl;
 
-  // clang-format off
+  std::string result =
+      "SELECT DISTINCT e.equipment_id, c.company_id, s.service_id, "
+      "e.unit_type_id, e.unit_class_id, e.unit_subclass_id, e.reg_id, e.code "
+      "AS equipment_code, c.name AS company_name, s.name AS service_name, "
+      "ut.code AS unit_type_code, ut.name AS unit_type_name, uc.code AS "
+      "unit_class_code, uc.name AS unit_class_name, us.code AS "
+      "unit_sub_class_code, us.name AS unit_subclass_name, e.flags, e.status, "
+      "ua.username AS add_username, um.username AS mod_username FROM equipment "
+      "AS e INNER JOIN equipment_type AS ut ON e.equipment_type_id = "
+      "ut.equipment_type_id INNER JOIN equipment_class AS uc ON "
+      "e.equipment_class_id = uc.equipment_class_id INNER JOIN "
+      "equipment_sub_class AS us ON e.equipment_sub_class_id = "
+      "us.equipment_sub_class_id INNER JOIN services AS s ON e.service_id = "
+      "s.service_id INNER JOIN company AS c ON s.company_id = c.company_id "
+      "LEFT JOIN users AS ua ON e.add_by = ua.user_id LEFT JOIN users AS um ON "
+      "e.mod_by = um.user_id ";
 
-
-  REQUIRE(true == true);
+  REQUIRE(result == output);
 }
 
 TEST_CASE("select-test-complex", "[validator][normal-case]") {

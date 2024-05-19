@@ -638,27 +638,23 @@ class SelectBlock {
   FromTableBlock<TParameterType> from_table_;
   std::vector<FieldDef<TParameterType>> fields_;
   std::vector<TParameterType> parameter_values_;
-  bool pretty_print_;
 
  public:
-  explicit SelectBlock(uint32_t current_param_index, bool pretty_print = false)
+  explicit SelectBlock(uint32_t current_param_index)
       : current_param_index_(current_param_index),
         level_(0),
         join_blocks_(),
         from_table_(*this, level_),
         fields_(),
-        parameter_values_(),
-        pretty_print_(pretty_print) {}
+        parameter_values_() {}
 
-  explicit SelectBlock(uint32_t current_param_index, uint32_t level,
-                       bool pretty_print = false)
+  explicit SelectBlock(uint32_t current_param_index, uint32_t level)
       : current_param_index_(current_param_index),
         level_(level),
         join_blocks_(),
         from_table_(*this),
         fields_(),
-        parameter_values_(),
-        pretty_print_(pretty_print) {}
+        parameter_values_() {}
 
   ~SelectBlock() {}
 
@@ -760,7 +756,7 @@ class SelectBlock {
     // SELECT
     query << (pretty_print ? GenerateIndentation(level_) + "SELECT \n"
                            : "SELECT ")
-          << (pretty_print_ ? "\n" : "");
+          << (pretty_print? "\n" : "");
     bool first_element = true;
     for (const auto& field : fields_) {
       if (!first_element) query << (pretty_print ? ", \n" : ", ");
