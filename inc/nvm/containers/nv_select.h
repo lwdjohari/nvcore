@@ -340,6 +340,10 @@ class JoinStatement {
     return query.str();
   }
 
+  /// @brief Construct LEFT JOIN Statement
+  /// @param left_table
+  /// @param right_table
+  /// @return
   JoinStatement& LeftJoin(RecordKey&& left_table, RecordKey&& right_table) {
     joins_.emplace_back(std::forward<RecordKey>(left_table),
                         std::forward<RecordKey>(right_table),
@@ -347,6 +351,13 @@ class JoinStatement {
     return *this;
   }
 
+  /// @brief Construct LEFT Join by query string
+  /// @param right_table
+  /// @param left_table
+  /// @param left_table_field_key
+  /// @param left_table_alias
+  /// @param op
+  /// @return
   JoinStatement& LeftJoin(RecordKey&& right_table,
                           const std::string& left_table,
                           const std::string& left_table_field_key,
@@ -365,7 +376,7 @@ class JoinStatement {
     return *this;
   }
 
-  /// @brief
+  /// @brief Construct RIGHT JOIN statement
   /// @param left_table
   /// @param right_table
   /// @return
@@ -376,6 +387,13 @@ class JoinStatement {
     return *this;
   }
 
+  /// @brief Construct RIGHT JOIN statement from query string
+  /// @param left_table
+  /// @param right_table
+  /// @param right_table_field_key
+  /// @param right_table_alias
+  /// @param op
+  /// @return
   JoinStatement& RightJoin(RecordKey&& left_table,
                            const std::string& right_table,
                            const std::string& right_table_field_key,
@@ -395,6 +413,10 @@ class JoinStatement {
     return *this;
   }
 
+  /// @brief Construct INNER JOIN statement
+  /// @param existing_select
+  /// @param join_on_table
+  /// @return
   JoinStatement& InnerJoin(RecordKey&& existing_select,
                            RecordKey&& join_on_table) {
     joins_.emplace_back(std::forward<RecordKey>(existing_select),
@@ -403,6 +425,13 @@ class JoinStatement {
     return *this;
   }
 
+  /// @brief Construct INNER JOIN from query string
+  /// @param existing_select
+  /// @param join_on_table
+  /// @param join_table_field_key
+  /// @param join_table_alias
+  /// @param op
+  /// @return
   JoinStatement& InnerJoin(RecordKey& existing_select,
                            const std::string& join_on_table,
                            const std::string& join_table_field_key,
@@ -466,11 +495,18 @@ class FromTableStatement {
 
   ~FromTableStatement() {}
 
+  /// @brief Add table clause inside FROM statement
+  /// @param table
+  /// @return
   FromTableStatement& AddTable(FromTable&& table) {
     tables_.emplace_back(std::forward<FromTable>(table));
     return *this;
   }
 
+  /// @brief Add table clause inside FROM statement
+  /// @param table_name
+  /// @param table_alias
+  /// @return
   FromTableStatement& AddTable(
       const std::string& table_name,
       const std::optional<std::string>& table_alias = std::nullopt) {
@@ -492,6 +528,9 @@ class FromTableStatement {
   std::string __GenerateSelectQuery(const NvSelect<TParameterType>& selects,
                                     bool pretty_print) const;
 
+  /// @brief Construct SUBQUERY inside FROM Statement block
+  /// @param table_alias
+  /// @return
   NvSelect<TParameterType>& BeginSubquery(const std::string& table_alias);
 
   NvSelect<TParameterType>& Reset() {
@@ -505,6 +544,9 @@ class FromTableStatement {
     return tables_.empty();
   }
 
+  /// @brief End of FROM statement BLOCK. For SUBQUERY must call
+  /// .EndSubqueryInsideFromBlock() to return back to FROM block stement.
+  /// @return
   NvSelect<TParameterType>& EndFromTableBlock() {
     // std::cout << "LEVEL:" << level_ << std::endl;
     // std::cout << &parent_ << std::endl;
@@ -665,8 +707,13 @@ struct FieldDef {
   }
 };
 
+/// @brief Fluent SQL Select Builder. TParameterType is typedef of
+/// std::variant<supported_data_type_by_cpp_for_db>. You can customize to your
+/// supported c++ data type for any database based on the db connector that you
+/// are use.
+/// @tparam TParameterType DefaultPostgresParamType.
 template <typename TParameterType>
-class NvSelect {
+class NvSelect final {
  private:
   uint32_t current_param_index_;
   uint32_t level_;
@@ -681,6 +728,23 @@ class NvSelect {
   std::shared_ptr<GroupByStatement<TParameterType>> group_by_;
 
  public:
+  /// @brief Construct NvSelect with parameter index start from 1.
+  NvSelect()
+                  : current_param_index_(1),
+                    level_(0),
+                    join_blocks_(),
+                    from_table_(*this, level_),
+                    fields_(),
+                    parameter_values_(),
+                    subquery_from_parent_(nullptr),
+                    table_alias_(),
+                    where_(nullptr),
+                    order_by_(nullptr),
+                    group_by_(nullptr) {}
+
+  /// @brief Construct NvSelect with parameter as specified.
+  /// @param current_param_index start of parameter index, must be 1 based for
+  /// the start.
   explicit NvSelect(uint32_t current_param_index)
                   : current_param_index_(current_param_index),
                     level_(0),
@@ -694,6 +758,9 @@ class NvSelect {
                     order_by_(nullptr),
                     group_by_(nullptr) {}
 
+  /// @brief DO NOT USE THIS DIRECTLY, SUBQUERY USE THIS CONST
+  /// @param current_param_index
+  /// @param level
   explicit NvSelect(uint32_t current_param_index, uint32_t level)
                   : current_param_index_(current_param_index),
                     level_(level),
@@ -707,6 +774,12 @@ class NvSelect {
                     order_by_(nullptr),
                     group_by_(nullptr) {}
 
+  /// @brief DO NOT USE DIRECTLY, SUBQUERY FROM NESTED FROM STATEMENT USE THIS
+  /// CONST
+  /// @param current_param_index
+  /// @param level
+  /// @param from_obj
+  /// @param table_alias
   explicit NvSelect(uint32_t current_param_index, uint32_t level,
                     FromTableStatement<TParameterType>* from_obj,
                     const std::string& table_alias)
@@ -736,12 +809,21 @@ class NvSelect {
     return level_;
   }
 
+  /// @brief Define select field/column
+  /// @tparam T type in std::variant of TParameterType
+  /// @param field
+  /// @return
   template <typename T>
   NvSelect& Field(const std::string& field) {
     return Field<T>(field, std::nullopt, std::nullopt,
                     SqlAggregateFunction::None, false);
   }
 
+  /// @brief Define select field/column
+  /// @tparam T type in std::variant of TParameterType
+  /// @param field
+  /// @param table_alias
+  /// @return
   template <typename T>
   NvSelect& Field(const std::string& field,
                   const std::optional<std::string>& table_alias) {
@@ -749,6 +831,12 @@ class NvSelect {
                     SqlAggregateFunction::None, false);
   }
 
+  /// @brief Define select field/column
+  /// @tparam T type in std::variant of TParameterType
+  /// @param field
+  /// @param table_alias
+  /// @param field_alias
+  /// @return
   template <typename T>
   NvSelect& Field(const std::string& field,
                   const std::optional<std::string>& table_alias,
@@ -757,6 +845,12 @@ class NvSelect {
                     false);
   }
 
+  /// @brief Define select field/column
+  /// @tparam T type in std::variant of TParameterType
+  /// @param field
+  /// @param table_alias
+  /// @param aggregate_fn
+  /// @return
   template <typename T>
   NvSelect& Field(const std::string& field,
                   const std::optional<std::string>& table_alias,
@@ -764,6 +858,14 @@ class NvSelect {
     return Field<T>(field, table_alias, std::nullopt, aggregate_fn, false);
   }
 
+  /// @brief Define select field/column
+  /// @tparam T type in std::variant of TParameterType
+  /// @param field
+  /// @param table_alias
+  /// @param field_alias
+  /// @param aggregate_fn
+  /// @param enclose_field_name
+  /// @return
   template <typename T>
   NvSelect& Field(const std::string& field,
                   const std::optional<std::string>& table_alias,
@@ -788,6 +890,8 @@ class NvSelect {
     // return from_table_;
   }
 
+  /// @brief Construct SQL FROM Statement block
+  /// @return
   FromTableStatement<TParameterType>& From() {
     try {
       return from_table_;
@@ -797,6 +901,8 @@ class NvSelect {
     }
   }
 
+  /// @brief Construct SQL WHERE Statement block
+  /// @return
   WhereStatement<TParameterType>& Where() {
     // TARGET CONST
     // / explicit WhereStatement(NvSelect<TParamaterType>* parent,
@@ -813,10 +919,14 @@ class NvSelect {
     return *where_;
   }
 
+  /// @brief End of SELECT Statement
+  /// @return
   NvSelect& EndBlock() {
     return *this;
   }
 
+  /// @brief Construct Join Statement Block
+  /// @return
   JoinStatement<TParameterType>& Join() {
     try {
       join_blocks_.emplace_back(*this, level_);
@@ -828,6 +938,8 @@ class NvSelect {
     }
   }
 
+  /// @brief Construct SQL ORDER BY Statement block
+  /// @return
   OrderByStatement<TParameterType>& OrderBy() {
     if (!order_by_) {
       order_by_ =
@@ -837,6 +949,8 @@ class NvSelect {
     return *order_by_;
   }
 
+  /// @brief Construct SQL GROUP BY Statement block
+  /// @return
   GroupByStatement<TParameterType>& GroupBy() {
     if (!group_by_) {
       group_by_ = std::make_shared<GroupByStatement<TParameterType>>(
@@ -882,6 +996,9 @@ class NvSelect {
   //   return *this;
   // }
 
+  /// @brief Build and Generate SQL string in this NvSelect object
+  /// @param pretty_print
+  /// @return
   std::string GenerateQuery(bool pretty_print = false) const {
     std::ostringstream query;
 
@@ -948,6 +1065,9 @@ class NvSelect {
     return query.str();
   }
 
+  /// @brief Get parameter values, all values has been packed with order based
+  /// on the parameter index
+  /// @return
   std::vector<TParameterType> Values() const {
     return parameter_values_;
   }
