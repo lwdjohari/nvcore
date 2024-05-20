@@ -16,10 +16,10 @@ TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
   using RecordKey = nvm::containers::RecordKey;
   using SqlAggregateFn = nvm::containers::SqlAggregateFunction;
   auto select = std::make_unique<NvSelect>(1);
+
   // clang-format off
   std::cout << "NvSelect size:" << sizeof(*select) << std::endl;
   std::cout << "NvSelect ptr-size:" << sizeof(select) << std::endl;
-
   
   (*select)
     .Field<int32_t>("equipment_id","e")
@@ -95,6 +95,10 @@ TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
         .AddCondition("s.service_code",SqlOperator::kEqual, "MS")
       .EndClauseBlock()
       .EndWhereBlock()
+    .GroupBy()
+      .Field("company_id","e")
+      .Field("service_name")
+    .EndOrderByBlock()
     .OrderBy()
       .OrderByAsc("company_name")
       .OrderByAsc("service_name")

@@ -120,6 +120,7 @@ template <typename TParameterType = DefaultPostgresParamType>
 class OrderByStatement;
 
 // Forward declaration Group By
+template <typename TParameterType = DefaultPostgresParamType>
 class GroupByStatement;
 
 // Forward declaration HavingByStatement
