@@ -10,8 +10,7 @@ using namespace nvm;
 TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
   // using Validator = nvm::containers::validations::Validator;
   using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
-  using NvSelect =
-      nvm::containers::NvSelect<DefaultPostgresParamType>;
+  using NvSelect = nvm::containers::NvSelect<DefaultPostgresParamType>;
   using SqlOperator = nvm::containers::SqlOperator;
   using RecordKey = nvm::containers::RecordKey;
   using SqlAggregateFn = nvm::containers::SqlAggregateFunction;
@@ -98,7 +97,7 @@ TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
     .GroupBy()
       .Field("company_id","e")
       .Field("service_name")
-    .EndOrderByBlock()
+    .EndGroupByBlock()
     .OrderBy()
       .OrderByAsc("company_name")
       .OrderByAsc("service_name")
@@ -134,8 +133,7 @@ TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
 
 TEST_CASE("select-test-complex-2", "[validator][normal-case]") {
   using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
-  using NvSelect =
-      nvm::containers::NvSelect<DefaultPostgresParamType>;
+  using NvSelect = nvm::containers::NvSelect<DefaultPostgresParamType>;
   using SqlOperator = nvm::containers::SqlOperator;
   using RecordKey = nvm::containers::RecordKey;
   using SqlAggregateFn = nvm::containers::SqlAggregateFunction;
@@ -179,93 +177,59 @@ TEST_CASE("select-test-complex-2", "[validator][normal-case]") {
 
   std::cout << s.GenerateQuery(true) << std::endl;
 }
-// TEST_CASE("select-test-complex", "[validator][normal-case]") {
-//   // using Validator = nvm::containers::validations::Validator;
-//   using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
-//   using NvSelect =
-//   nvm::containers::NvSelect<DefaultPostgresParamType>; using
-//   SqlOperator = nvm::containers::SqlOperator; using RecordKey =
-//   nvm::containers::RecordKey; using SqlAggregateFn =
-//   nvm::containers::SqlAggregateFunction;
+TEST_CASE("select-test-grouby-count", "[validator][normal-case]") {
+  // using Validator = nvm::containers::validations::Validator;
+  using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
+  using NvSelect = nvm::containers::NvSelect<DefaultPostgresParamType>;
+  using SqlOperator = nvm::containers::SqlOperator;
+  using RecordKey = nvm::containers::RecordKey;
+  using SqlAggregateFn = nvm::containers::SqlAggregateFunction;
 
-//   NvSelect select(1);
-//   // clang-format off
-//   select
-//     .Field<int32_t>("company_id","c", "company_id")
-//     .Field<std::string>("name","c","company_name")
-//     .Field<int32_t>("service_id","s", "service_id")
-//     .Field<std::string>("name","s","service_name")
-//     .Field<int32_t>("unit_type_id","e","unit_type_id")
-//     .Field<int32_t>("unit_class_id","e","unit_class_id")
-//     .Field<int32_t>("unit_subclass_id","e","unit_subclass_id")
-//     .Field<std::string>("code","ut","unit_type_code")
-//     .Field<std::string>("name","ut","unit_type_name")
-//     .Field<std::string>("code","uc","unit_class_code")
-//     .Field<std::string>("name","uc","unit_class_name")
-//     .Field<std::string>("code","us","unit_subclass_code")
-//     .Field<std::string>("name","us", "unit_subclass_name")
-//     .Field<int32_t>("qty","group_ec","qty")
-//     .From()
-//       .AddTable("equipment","e")
-//       .EndFromTableBlock()
-//     .Join()
-//       .InnerJoinWithSubQuery(
-//         "ec","equipment_id","group_ec"
-//         RecordKey("equipment","equipment_id","e"))
-//           .Field("equipment_id","ec","equipment_id",SqlAggregateFn::Distinct)
-//           .Field("equipment_id","ec", SqlAggregateFn::Count, "qty")
-//           .From()
-//             .AddTable("equipment","ec")
-//             .EndFromTableBlock()
-//           .InnerJoin(
-//             RecordKey("equipment","equipment_id","ec"),
-//             RecordKey("services","service_id","sc"))
-//           .InnerJoin(
-//             RecordKey("services","service_id","sc"),
-//             RecordKey("company","company_id","cc"))
-//           .EndJoinBlock()
-//           .CreateWhereBlock()
-//             .ConditionIn<int32_t>("company_id","cc", companies)
-//             .EndWhereBlock()
-//           .CreateGroupBy()
-//             .Field("company_id","cc")
-//             .Field("service_id","sc")
-//             .Field("unit_type_id")
-//             .Field("unit_class_id")
-//             .Field("unit_subclass_id")
-//           .EndGroupByBlock()
-//           .CreateHavingBy()
-//             .Field<int32_t>("qty",SqlOperator::kGreater,10)
-//           .EndBlock()
-//         .EndSubquery()
-//       .InnerJoin(
-//         RecordKey("equipment","service_id","e"),
-//         RecordKey("services","service_id","s"))
-//       .InnerJoin(
-//         RecordKey("services","company_id","s"),
-//         RecordKey("company","company_id","c"))
-//       .InnerJoin(
-//         RecordKey("equipment","unit_type_id","e"),
-//         RecordKey("equipment_type","unit_type_id","ut"))
-//       .InnerJoin(
-//         RecordKey("equipment","unit_class_id","e"),
-//         RecordKey("equipment_class","unit_class_id","uc"))
-//       .InnerJoin(
-//         RecordKey("equipment","unit_subclass_id","e"),
-//         RecordKey("equipment_subclass","unit_subclass_id","us"))
-//       .InnerJoin(
-//         RecordKey("equipment","company_id","e"),
-//         RecordKey("company","company_id","c"))
-//       .InnerJoin(
-//         RecordKey("equipment","equipment_id","e"),
-//         GetEquipmentReadAccessData(user_id)) // Subquery to get group_id
-//         access to equipment data
-//       .EndJoinBlock()
-//     .EndBlock();
+  NvSelect select;
+  // clang-format off
+  select
+    .Field<int32_t>("equipment_id","e")
+    .Field<int32_t>("company_id","c")
+    .Field<int32_t>("service_id","e")
+    .Field<int32_t>("unit_type_id","e")
+    .Field<int32_t>("unit_class_id","e")
+    .Field<int32_t>("*",std::nullopt,SqlAggregateFn::Count)
+    .From()
+      .AddTable("equipment","e")
+    .EndFromTableBlock()
+    .Join()
+      .InnerJoin(
+        RecordKey("equipment","service_id","e"),
+        RecordKey("service","service_id","s"))
+      .InnerJoin(
+        RecordKey("service","company_id","s"),
+        RecordKey("company","company_id","c"))
+    .EndJoinBlock()
+    .Where()
+      .BeginClause()
+        .AddConditionIn<int32_t>("c.company_id",{1,2,3})
+      .EndClauseBlock()
+    .EndWhereBlock()
+    .GroupBy()
+      .Field("equipment_id","e")
+      .Field("company_id","c")
+      .Field("service_id","e")
+      .Field("unit_type_id","e")
+      .Field("unit_class_id","e")
+    .EndGroupByBlock()
+    .OrderBy()
+      .OrderByAsc("company_id","c")
+      .OrderByAsc("unit_type_id","e")
+      .OrderByAsc("unit_class_id","e")
+      .OrderByAsc("equipment_id","e")
+    .EndOrderByBlock()
+    .EndBlock();
+    
+  //   std::cout << select.GenerateQuery() << std::endl;
 
-//   //   std::cout << select.GenerateQuery() << std::endl;
+  // clang-format off
 
-//   // clang-format off
+     std::cout << select.GenerateQuery(true) << std::endl;
 
-//   REQUIRE(true == true);
-// }
+  REQUIRE(true == true);
+}

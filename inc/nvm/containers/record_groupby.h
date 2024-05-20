@@ -130,7 +130,7 @@ class GroupByStatement {
     return param_index_;
   }
 
-  NvSelect<TParameterType>& EndOrderByBlock() {
+  NvSelect<TParameterType>& EndGroupByBlock() {
     if (!parent_)
       throw std::runtime_error(
           "null-reference to parent of NvSelect<TParameterType>");

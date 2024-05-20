@@ -1043,7 +1043,7 @@ class NvSelect final {
     }
 
     // GROUP BY
-    if (order_by_ != nullptr) {
+    if (group_by_ != nullptr) {
       query << (pretty_print ? GenerateIndentation(level_) + "\nGROUP BY \n"
                              : " GROUP BY ");
       query << (pretty_print ? GenerateIndentation(level_ + 1) : "")
