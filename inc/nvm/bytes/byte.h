@@ -53,8 +53,8 @@ inline EndianessType HostEndianess() {
 /// @param size
 /// @return
 template <typename T>
-ByteOpResult CopyBytes(const T *src, const T *dest,
-                       const size_t &size) noexcept {
+ByteOpResult CopyBytes(const T* src, const T* dest,
+                       const size_t& size) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
 
@@ -68,7 +68,8 @@ ByteOpResult CopyBytes(const T *src, const T *dest,
   }
 };
 
-/// @brief Convert known-types to raw bytes sequence in big-endian or little-endian format. 
+/// @brief Convert known-types to raw bytes sequence in big-endian or
+/// little-endian format.
 /// @tparam TVal type of int8_t to int64_t, uint8_t to uint64_t,
 /// double, float, std::string, Utf8Str or bool
 /// @tparam TSeq char or uint8_t
@@ -79,7 +80,7 @@ ByteOpResult CopyBytes(const T *src, const T *dest,
 /// @return
 template <typename TVal, typename TSeq>
 ByteOpResult ToBytes(
-    const TVal &val, TSeq *dest, const size_t &dest_size,
+    const TVal& val, TSeq* dest, const size_t& dest_size,
     EndianessType target = EndianessType::LittleEndian) noexcept {
   static_assert(
       std::is_same<TSeq, char>::value || std::is_same<TSeq, uint8_t>::value,
@@ -220,8 +221,8 @@ ByteOpResult ToBytes(
 /// @param result
 /// @return
 template <typename T>
-uint8_t ToUint8(const T *bytes, const size_t &size,
-                ByteOpResult &result) noexcept {
+uint8_t ToUint8(const T* bytes, const size_t& size,
+                ByteOpResult& result) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
 
@@ -233,7 +234,7 @@ uint8_t ToUint8(const T *bytes, const size_t &size,
 };
 
 template <typename T>
-uint16_t ToUint16(const T *bytes, const size_t &size, ByteOpResult &result,
+uint16_t ToUint16(const T* bytes, const size_t& size, ByteOpResult& result,
                   EndianessType target = EndianessType::LittleEndian) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
@@ -255,7 +256,7 @@ uint16_t ToUint16(const T *bytes, const size_t &size, ByteOpResult &result,
 /// @param target
 /// @return
 template <typename T>
-uint32_t ToUint32(const T *bytes, const size_t &size, ByteOpResult &result,
+uint32_t ToUint32(const T* bytes, const size_t& size, ByteOpResult& result,
                   EndianessType target = EndianessType::LittleEndian) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
@@ -277,7 +278,7 @@ uint32_t ToUint32(const T *bytes, const size_t &size, ByteOpResult &result,
 /// @param target
 /// @return
 template <typename T>
-uint64_t ToUint64(const T *bytes, const size_t &size, ByteOpResult &result,
+uint64_t ToUint64(const T* bytes, const size_t& size, ByteOpResult& result,
                   EndianessType target = EndianessType::LittleEndian) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
@@ -298,8 +299,8 @@ uint64_t ToUint64(const T *bytes, const size_t &size, ByteOpResult &result,
 /// @param result
 /// @return
 template <typename T>
-int8_t ToInt8(const T *bytes, const size_t &size,
-              ByteOpResult &result) noexcept {
+int8_t ToInt8(const T* bytes, const size_t& size,
+              ByteOpResult& result) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
 
@@ -318,7 +319,7 @@ int8_t ToInt8(const T *bytes, const size_t &size,
 /// @param target
 /// @return
 template <typename T>
-int16_t ToInt16(const T *bytes, const size_t &size, ByteOpResult &result,
+int16_t ToInt16(const T* bytes, const size_t& size, ByteOpResult& result,
                 EndianessType target = EndianessType::LittleEndian) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
@@ -340,7 +341,7 @@ int16_t ToInt16(const T *bytes, const size_t &size, ByteOpResult &result,
 /// @param target
 /// @return
 template <typename T>
-int32_t ToInt32(const T *bytes, const size_t &size, ByteOpResult &result,
+int32_t ToInt32(const T* bytes, const size_t& size, ByteOpResult& result,
                 EndianessType target = EndianessType::LittleEndian) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
@@ -362,7 +363,7 @@ int32_t ToInt32(const T *bytes, const size_t &size, ByteOpResult &result,
 /// @param target
 /// @return
 template <typename T>
-int64_t ToInt64(const T *bytes, const size_t &size, ByteOpResult &result,
+int64_t ToInt64(const T* bytes, const size_t& size, ByteOpResult& result,
                 EndianessType target = EndianessType::LittleEndian) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
@@ -384,7 +385,7 @@ int64_t ToInt64(const T *bytes, const size_t &size, ByteOpResult &result,
 /// @param target
 /// @return
 template <typename T>
-float ToFloat(const T *bytes, const size_t &size, ByteOpResult &result,
+float ToFloat(const T* bytes, const size_t& size, ByteOpResult& result,
               EndianessType target = EndianessType::LittleEndian) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
@@ -406,7 +407,7 @@ float ToFloat(const T *bytes, const size_t &size, ByteOpResult &result,
 /// @param target
 /// @return
 template <typename T>
-double ToDouble(const T *bytes, const size_t &size, ByteOpResult &result,
+double ToDouble(const T* bytes, const size_t& size, ByteOpResult& result,
                 EndianessType target = EndianessType::LittleEndian) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
@@ -428,7 +429,7 @@ double ToDouble(const T *bytes, const size_t &size, ByteOpResult &result,
 /// @return
 template <typename T>
 std::string ToAsciiString(
-    const T *bytes, const size_t &size, ByteOpResult &result,
+    const T* bytes, const size_t& size, ByteOpResult& result,
     EndianessType target = EndianessType::LittleEndian) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
@@ -445,7 +446,7 @@ std::string ToAsciiString(
 /// @param size
 /// @return
 template <typename T>
-Utf8String ToUtf8String(const T *bytes, const size_t &size) noexcept {
+Utf8String ToUtf8String(const T* bytes, const size_t& size) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
 
@@ -459,7 +460,7 @@ Utf8String ToUtf8String(const T *bytes, const size_t &size) noexcept {
 /// @param err
 /// @return
 template <typename T>
-uint16_t Crc16IBM(const T *buffer, size_t length, ByteOpResult &err) {
+uint16_t Crc16IBM(const T* buffer, size_t length, ByteOpResult& err) {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
 
@@ -494,7 +495,7 @@ uint16_t Crc16IBM(const T *buffer, size_t length, ByteOpResult &err) {
 /// @param target
 /// @return
 template <typename T>
-uint16_t Crc16CCITT(const T *buffer, size_t size, ByteOpResult &err,
+uint16_t Crc16CCITT(const T* buffer, size_t size, ByteOpResult& err,
                     EndianessType target) {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
@@ -539,7 +540,7 @@ uint16_t Crc16CCITT(const T *buffer, size_t size, ByteOpResult &err,
 /// @return
 template <typename T>
 std::shared_ptr<std::vector<T>> ToBytesFromHexString(
-    const std::string &hex_str) {
+    const std::string& hex_str) {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
 

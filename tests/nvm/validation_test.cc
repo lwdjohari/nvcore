@@ -10,8 +10,12 @@ using namespace nvm;
 class CustomObject {
  public:
   CustomObject(int a, double b) noexcept : a_(a), b_(b) {}
-  int GetA() const noexcept { return a_; }
-  double GetB() const noexcept { return b_; }
+  int GetA() const noexcept {
+    return a_;
+  }
+  double GetB() const noexcept {
+    return b_;
+  }
 
  private:
   int a_;

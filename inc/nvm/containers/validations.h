@@ -67,9 +67,9 @@ struct ValidationError {
 
   ValidationError(std::string key, std::optional<int> error_code,
                   std::string message) noexcept
-      : key(std::move(key)),
-        error_code(error_code),
-        message(std::move(message)) {}
+                  : key(std::move(key)),
+                    error_code(error_code),
+                    message(std::move(message)) {}
 };
 
 class ValidationResult {
@@ -104,11 +104,11 @@ class Validator {
   Validator(const std::string& key, const T& value,
             std::queue<std::function<void()>>& tasks, ValidationResult& result,
             bool must_be_valid) noexcept
-      : key_(key),
-        value_(value),
-        tasks_(tasks),
-        result_(result),
-        must_be_valid_(must_be_valid) {}
+                  : key_(key),
+                    value_(value),
+                    tasks_(tasks),
+                    result_(result),
+                    must_be_valid_(must_be_valid) {}
 
   Validator& IsNotNull(
       std::optional<int> error_code = std::nullopt,
