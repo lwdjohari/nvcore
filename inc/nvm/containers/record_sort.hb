@@ -27,18 +27,20 @@
 #include <memory>
 #include <optional>
 #include <unordered_map>
+
 #include "nvm/containers/record_def.h"
 
 namespace nvm::containers {
 
-struct SortField {
+struct SortField1 {
   std::shared_ptr<RecordTable> table_;
   std::string name;
   SortType sort_type;
   FieldPinMode pin_mode;
 
   explicit SortField(
-      const std::string& field_name, SortType sort_type,
+      const std::string& field_name,
+      SortType sort_type,
       const std::string& table_name,
       const std::optional<std::string>& table_alias = std::nullopt,
       FieldPinMode pin_mode = FieldPinMode::None)
@@ -47,7 +49,8 @@ struct SortField {
         sort_type(sort_type),
         pin_mode(pin_mode) {}
 
-  explicit SortField(const std::string& field_name, SortType sort_type,
+  explicit SortField(const std::string& field_name,
+                     SortType sort_type,
                      FieldPinMode pin_mode = FieldPinMode::None,
                      std::shared_ptr<RecordTable> table = nullptr)
       : table_(table),
@@ -56,14 +59,14 @@ struct SortField {
         pin_mode(pin_mode) {}
 };
 
-class RecordSort final {
+class OrderByStatement1 final {
  private:
   std::unordered_map<std::string, SortField> fields_;
   std::unordered_map<std::string, SortField> pinned_fields_;
 
  public:
-  RecordSort() : fields_(), pinned_fields_(){};
-  ~RecordSort(){};
+  OrderByStatement() : fields_(), pinned_fields_(){};
+  ~OrderByStatement(){};
 
   bool IsFieldExist(const std::string& key) const {
     return fields_.find(key) != fields_.end();
@@ -74,7 +77,8 @@ class RecordSort final {
   }
 
   bool AddField(const std::string& key, const SortField& field) {
-    if (IsFieldExist(key) || IsFieldExistOnPinned(key)) return false;
+    if (IsFieldExist(key) || IsFieldExistOnPinned(key))
+      return false;
 
     if (field.pin_mode != FieldPinMode::None) {
       pinned_fields_.emplace(key, field);
@@ -108,7 +112,9 @@ class RecordSort final {
     fields_.clear();
   }
 
-  bool IsEmpty() const { return fields_.empty(); }
+  bool IsEmpty() const {
+    return fields_.empty();
+  }
 
   const std::unordered_map<std::string, SortField> Fields() const {
     return fields_;
@@ -153,14 +159,15 @@ class RecordSort final {
 
     std::vector<std::string> all_parts;
     all_parts.insert(all_parts.end(), start_pinned.begin(), start_pinned.end());
-    all_parts.insert(all_parts.end(), normal_fields.begin(),
-                     normal_fields.end());
+    all_parts.insert(
+        all_parts.end(), normal_fields.begin(), normal_fields.end());
     all_parts.insert(all_parts.end(), end_pinned.begin(), end_pinned.end());
 
     std::ostringstream query;
     query << "ORDER BY ";
     for (size_t i = 0; i < all_parts.size(); ++i) {
-      if (i > 0) query << ", ";
+      if (i > 0)
+        query << ", ";
       query << all_parts[i];
     }
 

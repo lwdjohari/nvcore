@@ -9,39 +9,9 @@
 #include <vector>
 
 #include "nvm/containers/record_def.h"
-
+#include "nvm/containers/record_filter.h"
+#include "nvm/containers/record_orderby.h"
 namespace nvm::containers {
-
-enum class SqlAggregateFunction {
-  None = 0,
-  Distinct = 1,
-  Count = 2,
-  Avg = 3,
-  Sum = 4,
-  ToUpper = 5,
-  ToLower = 6,
-  ToIso8601DateTime = 7,
-  ToIso8601Date = 8,
-  ToIso8601Time = 9
-};
-
-enum class SqlJoinType {
-  None = 0,
-  InnerJoin = 1,
-  LeftJoin = 2,
-  RightJoin = 4,
-};
-
-enum class JoinDefMode {
-  RecordKeyBoth = 0,
-  SubquerySelectString = 1,
-  SubqueryRawString = 2,
-  SubquerySelectObject = 3
-};
-
-// Forward declration for SelectBlock
-template <typename TParameterType = DefaultPostgresParamType>
-class SelectBlock;
 
 struct RecordKey {
   std::string table;
@@ -50,14 +20,17 @@ struct RecordKey {
   bool initialize;
 
   RecordKey()
-      : table(), field(), table_alias(std::nullopt), initialize(false) {}
+                  : table(),
+                    field(),
+                    table_alias(std::nullopt),
+                    initialize(false) {}
 
   explicit RecordKey(const std::string& table, const std::string& field,
                      const std::optional<std::string>& alias = std::nullopt)
-      : table(std::string(table)),
-        field(std::string(field)),
-        table_alias(std::optional<std::string>(alias)),
-        initialize(true) {}
+                  : table(std::string(table)),
+                    field(std::string(field)),
+                    table_alias(std::optional<std::string>(alias)),
+                    initialize(true) {}
 
   std::string BuildField() const {
     return table_alias.has_value() ? table_alias.value() + "." + field
@@ -75,56 +48,73 @@ class JoinDef {
  public:
   JoinDef(RecordKey&& left_table, RecordKey&& right_table, SqlJoinType join,
           uint32_t level)
-      : subquery_str_(),
-        subsquery_str_alias_(),
-        subquery_field_key_(),
-        subquery_obj_(),
-        left_table_(std::forward<RecordKey>(left_table)),
-        right_table_(std::forward<RecordKey>(right_table)),
-        join_type_(join),
-        join_mode_(JoinDefMode::RecordKeyBoth),
-        level_(level) {}
+                  : subquery_str_(),
+                    subsquery_str_alias_(),
+                    subquery_field_key_(),
+                    subquery_obj_(),
+                    left_table_(std::forward<RecordKey>(left_table)),
+                    right_table_(std::forward<RecordKey>(right_table)),
+                    join_type_(join),
+                    join_mode_(JoinDefMode::RecordKeyBoth),
+                    level_(level) {}
 
   JoinDef(RecordKey&& left_table, SqlJoinType join, const std::string& subquery,
           const std::string& subquery_field_key,
           const std::string& subquery_table_alias, SqlOperator op,
           uint32_t level)
-      : subquery_str_(std::string(subquery)),
-        subsquery_str_alias_(std::string(subquery_table_alias)),
-        subquery_field_key_(std::string(subquery_field_key)),
-        subquery_obj_(),
-        left_table_(std::forward<RecordKey>(left_table)),
-        right_table_(RecordKey()),
-        join_type_(join),
-        join_mode_(JoinDefMode::SubquerySelectString),
-        level_(level) {}
+                  : subquery_str_(std::string(subquery)),
+                    subsquery_str_alias_(std::string(subquery_table_alias)),
+                    subquery_field_key_(std::string(subquery_field_key)),
+                    subquery_obj_(),
+                    left_table_(std::forward<RecordKey>(left_table)),
+                    right_table_(RecordKey()),
+                    join_type_(join),
+                    join_mode_(JoinDefMode::SubquerySelectString),
+                    level_(level) {}
 
-  JoinDef(RecordKey&& existing_table, SelectBlock<TParameterType>&& subquery,
-          SqlJoinType join, uint32_t level)
-      : subquery_str_(),
-        subsquery_str_alias_(),
-        subquery_field_key_(),
-        subquery_obj_(std::make_shared<SelectBlock<TParameterType>>(
-            std::forward<SelectBlock<TParameterType>>(subquery))),
-        left_table_(std::forward<RecordKey>(existing_table)),
-        right_table_(RecordKey()),
-        join_type_(join),
-        join_mode_(JoinDefMode::SubquerySelectObject),
-        level_(level) {}
+  JoinDef(RecordKey&& existing_table,
+          NvSelect<TParameterType>&& subquery, SqlJoinType join,
+          uint32_t level)
+                  : subquery_str_(),
+                    subsquery_str_alias_(),
+                    subquery_field_key_(),
+                    subquery_obj_(
+                        std::make_shared<NvSelect<TParameterType>>(
+                            std::forward<NvSelect<TParameterType>>(
+                                subquery))),
+                    left_table_(std::forward<RecordKey>(existing_table)),
+                    right_table_(RecordKey()),
+                    join_type_(join),
+                    join_mode_(JoinDefMode::SubquerySelectObject),
+                    level_(level) {}
 
-  SqlJoinType JoinType() const { return join_type_; }
+  SqlJoinType JoinType() const {
+    return join_type_;
+  }
 
-  JoinDefMode Mode() const { return join_mode_; }
+  JoinDefMode Mode() const {
+    return join_mode_;
+  }
 
-  const RecordKey& LeftTable() const { return left_table_; }
+  const RecordKey& LeftTable() const {
+    return left_table_;
+  }
 
-  const RecordKey& RightTable() const { return right_table_; }
+  const RecordKey& RightTable() const {
+    return right_table_;
+  }
 
-  SelectBlock<TParameterType>& Subquery() { return *subquery_obj_; }
+  NvSelect<TParameterType>& Subquery() {
+    return *subquery_obj_;
+  }
 
-  bool IsHasSubqueryObject() { return subquery_obj_ != nullptr; }
+  bool IsHasSubqueryObject() {
+    return subquery_obj_ != nullptr;
+  }
 
-  const std::string& SubqueryString() const { return subquery_str_; }
+  const std::string& SubqueryString() const {
+    return subquery_str_;
+  }
 
   const std::string& SubqueryAliasString() const {
     return subsquery_str_alias_;
@@ -152,7 +142,7 @@ class JoinDef {
   std::string subquery_str_;
   std::string subsquery_str_alias_;
   std::string subquery_field_key_;
-  mutable std::shared_ptr<SelectBlock<TParameterType>> subquery_obj_;
+  mutable std::shared_ptr<NvSelect<TParameterType>> subquery_obj_;
   RecordKey left_table_;
   RecordKey right_table_;
   SqlJoinType join_type_;
@@ -272,7 +262,6 @@ class JoinDef {
                                 bool pretty_print) const {
     std::ostringstream join;
     // clang-format off
-    // clang-format off
     join << 
         (pretty_print? GenerateIndentation(level_) : "") << 
         (pretty_print? "INNER JOIN\n" : "INNER JOIN ") << 
@@ -309,55 +298,64 @@ class JoinDef {
 };
 
 template <typename TParameterType = DefaultPostgresParamType>
-class JoinBlock {
+class JoinStatement {
  private:
-  SelectBlock<TParameterType>& parent_;
+  NvSelect<TParameterType>& parent_;
   std::vector<JoinDef<TParameterType>> joins_;
-  // std::unique_ptr<SelectBlock<TParameterType>> subquery_;
+  // std::unique_ptr<NvSelect<TParameterType>> subquery_;
   uint32_t current_parameter_index_;
   uint32_t level_;
 
  public:
-  explicit JoinBlock(SelectBlock<TParameterType>& parent, uint32_t level)
-      : parent_(parent),
-        joins_(),
-        // subquery_(nullptr),
-        current_parameter_index_(),
-        level_(level) {}
+  explicit JoinStatement(NvSelect<TParameterType>& parent,
+                         uint32_t level)
+                  : parent_(parent),
+                    joins_(),
+                    // subquery_(nullptr),
+                    current_parameter_index_(),
+                    level_(level) {}
 
-  SelectBlock<TParameterType>& EndJoinBlock() {
+  NvSelect<TParameterType>& EndJoinBlock() {
     // sync the current_parameter
 
     return parent_;
   };
 
-  std::string __GenerateSelectBlock(const SelectBlock<TParameterType>& select);
+  std::string __GenerateSelectBlock(
+      const NvSelect<TParameterType>& select);
 
   const std::vector<JoinDef<TParameterType>>& GetJoinClauses() const {
     return joins_;
   }
 
-  bool Empty() const { return joins_.empty(); }
+  bool Empty() const {
+    return joins_.empty();
+  }
 
   std::string GenerateQuery(bool prety_print = false) const {
     std::ostringstream query;
+    bool is_first_element = true;
     for (const auto& clause : joins_) {
-      query << clause.GenerateQuery(prety_print) << (prety_print ? "\n" : " ");
+      if (!is_first_element)
+        query << (prety_print ? "\n" : " ");
+      query << clause.GenerateQuery(prety_print);
+      is_first_element = false;
     }
     return query.str();
   }
 
-  JoinBlock& LeftJoin(RecordKey&& left_table, RecordKey&& right_table) {
+  JoinStatement& LeftJoin(RecordKey&& left_table, RecordKey&& right_table) {
     joins_.emplace_back(std::forward<RecordKey>(left_table),
                         std::forward<RecordKey>(right_table),
                         SqlJoinType::LeftJoin, level_);
     return *this;
   }
 
-  JoinBlock& LeftJoin(RecordKey&& right_table, const std::string& left_table,
-                      const std::string& left_table_field_key,
-                      const std::string& left_table_alias,
-                      SqlOperator op = SqlOperator::kEqual) {
+  JoinStatement& LeftJoin(RecordKey&& right_table,
+                          const std::string& left_table,
+                          const std::string& left_table_field_key,
+                          const std::string& left_table_alias,
+                          SqlOperator op = SqlOperator::kEqual) {
     // Const format
     // RecordKey&& left_table, SqlJoinType join,
     //       const std::string& subquery,
@@ -375,17 +373,18 @@ class JoinBlock {
   /// @param left_table
   /// @param right_table
   /// @return
-  JoinBlock& RightJoin(RecordKey&& left_table, RecordKey&& right_table) {
+  JoinStatement& RightJoin(RecordKey&& left_table, RecordKey&& right_table) {
     joins_.emplace_back(std::forward<RecordKey>(left_table),
                         std::forward<RecordKey>(right_table),
                         SqlJoinType::RightJoin, level_);
     return *this;
   }
 
-  JoinBlock& RightJoin(RecordKey&& left_table, const std::string& right_table,
-                       const std::string& right_table_field_key,
-                       const std::optional<std::string>& right_table_alias,
-                       SqlOperator op = SqlOperator::kEqual) {
+  JoinStatement& RightJoin(RecordKey&& left_table,
+                           const std::string& right_table,
+                           const std::string& right_table_field_key,
+                           const std::optional<std::string>& right_table_alias,
+                           SqlOperator op = SqlOperator::kEqual) {
     // Const format
     // RecordKey&& left_table, SqlJoinType join,
     //       const std::string& subquery,
@@ -400,18 +399,19 @@ class JoinBlock {
     return *this;
   }
 
-  JoinBlock& InnerJoin(RecordKey&& existing_select, RecordKey&& join_on_table) {
+  JoinStatement& InnerJoin(RecordKey&& existing_select,
+                           RecordKey&& join_on_table) {
     joins_.emplace_back(std::forward<RecordKey>(existing_select),
                         std::forward<RecordKey>(join_on_table),
                         SqlJoinType::InnerJoin, level_);
     return *this;
   }
 
-  JoinBlock& InnerJoin(RecordKey& existing_select,
-                       const std::string& join_on_table,
-                       const std::string& join_table_field_key,
-                       const std::optional<std::string>& join_table_alias,
-                       SqlOperator op = SqlOperator::kEqual) {
+  JoinStatement& InnerJoin(RecordKey& existing_select,
+                           const std::string& join_on_table,
+                           const std::string& join_table_field_key,
+                           const std::optional<std::string>& join_table_alias,
+                           SqlOperator op = SqlOperator::kEqual) {
     // Const format
     // RecordKey&& left_table, SqlJoinType join,
     //       const std::string& subquery,
@@ -425,9 +425,9 @@ class JoinBlock {
     return *this;
   }
 
-  // SelectBlock<TParameterType>& JoinWithSubquery(SqlJoinType join_type) {
+  // NvSelect<TParameterType>& JoinWithSubquery(SqlJoinType join_type) {
   //   if (!subquery_) {
-  //     subquery_ = std::make_shared<SelectBlock<TParameterType>>(
+  //     subquery_ = std::make_shared<NvSelect<TParameterType>>(
   //         parent_.GetCurrentParamIndex());
   //   }
 
@@ -443,7 +443,7 @@ struct FromTable {
 
   explicit FromTable(const std::string& table,
                      const std::optional<std::string>& alias = std::nullopt)
-      : table(table), table_alias(alias) {}
+                  : table(table), table_alias(alias) {}
 
   std::string BuildTableName() const {
     return table_alias.has_value() ? table + " AS " + table_alias.value()
@@ -452,30 +452,31 @@ struct FromTable {
 };
 
 template <typename TParameterType = DefaultPostgresParamType>
-class FromTableBlock {
+class FromTableStatement {
  private:
-  SelectBlock<TParameterType>& parent_;
+  NvSelect<TParameterType>& parent_;
   std::vector<FromTable> tables_;
-  std::vector<SelectBlock<TParameterType>> subqueries_;
+  std::vector<NvSelect<TParameterType>> subqueries_;
   uint32_t level_;
   uint32_t last_current_index_returned_;
 
  public:
-  explicit FromTableBlock(SelectBlock<TParameterType>& parent, uint32_t level)
-      : parent_(parent),
-        tables_(),
-        subqueries_(),
-        level_(uint32_t(level)),
-        last_current_index_returned_() {}
+  explicit FromTableStatement(NvSelect<TParameterType>& parent,
+                              uint32_t level)
+                  : parent_(parent),
+                    tables_(),
+                    subqueries_(),
+                    level_(uint32_t(level)),
+                    last_current_index_returned_() {}
 
-  ~FromTableBlock() {}
+  ~FromTableStatement() {}
 
-  FromTableBlock& AddTable(FromTable&& table) {
+  FromTableStatement& AddTable(FromTable&& table) {
     tables_.emplace_back(std::forward<FromTable>(table));
     return *this;
   }
 
-  FromTableBlock& AddTable(
+  FromTableStatement& AddTable(
       const std::string& table_name,
       const std::optional<std::string>& table_alias = std::nullopt) {
     tables_.emplace_back(FromTable(table_name, table_alias));
@@ -487,29 +488,30 @@ class FromTableBlock {
   }
 
   uint32_t __GetCurrentParameterIndexFromParent(
-      const SelectBlock<TParameterType>& select) const;
+      const NvSelect<TParameterType>& select) const;
 
-  void __CreateNewSelectBlock(std::vector<SelectBlock<TParameterType>>& selects,
-                              uint32_t index, uint32_t level,
-                              const std::string& table_alias);
+  void __CreateNewSelectBlock(
+      std::vector<NvSelect<TParameterType>>& selects, uint32_t index,
+      uint32_t level, const std::string& table_alias);
 
-  std::string __GenerateSelectQuery(const SelectBlock<TParameterType>& selects,
-                                    bool pretty_print) const;
+  std::string __GenerateSelectQuery(
+      const NvSelect<TParameterType>& selects, bool pretty_print) const;
 
-  SelectBlock<TParameterType>& AddSubquery(const std::string& table_alias);
+  NvSelect<TParameterType>& BeginSubquery(
+      const std::string& table_alias);
 
-  
-
-  SelectBlock<TParameterType>& Reset() {
+  NvSelect<TParameterType>& Reset() {
     subqueries_.clear();
     tables_.clear();
     last_current_index_returned_ = 0;
     return parent_;
   }
 
-  bool Empty() const { return tables_.empty(); }
+  bool Empty() const {
+    return tables_.empty();
+  }
 
-  SelectBlock<TParameterType>& EndFromTableBlock() {
+  NvSelect<TParameterType>& EndFromTableBlock() {
     // std::cout << "LEVEL:" << level_ << std::endl;
     // std::cout << &parent_ << std::endl;
     return parent_;
@@ -610,12 +612,12 @@ struct FieldDef {
       SqlAggregateFunction aggregate_fn = SqlAggregateFunction::None,
       const std::optional<std::string>& field_alias = std::nullopt,
       uint32_t level = 0)
-      : field(field),
-        table_alias(table_alias),
-        enclose_field_name(enclose_field_name),
-        aggregate_fn(aggregate_fn),
-        field_alias(field_alias),
-        level_(level) {}
+                  : field(field),
+                    table_alias(table_alias),
+                    enclose_field_name(enclose_field_name),
+                    aggregate_fn(aggregate_fn),
+                    field_alias(field_alias),
+                    level_(level) {}
 
   std::string GenerateQuery() const {
     std::ostringstream oss;
@@ -670,94 +672,106 @@ struct FieldDef {
 };
 
 template <typename TParameterType>
-class SelectBlock {
+class NvSelect {
  private:
   uint32_t current_param_index_;
   uint32_t level_;
-  std::vector<JoinBlock<TParameterType>> join_blocks_;
-  FromTableBlock<TParameterType> from_table_;
+  std::vector<JoinStatement<TParameterType>> join_blocks_;
+  FromTableStatement<TParameterType> from_table_;
   std::vector<FieldDef<TParameterType>> fields_;
   std::vector<TParameterType> parameter_values_;
-  FromTableBlock<TParameterType>* subquery_from_parent_;
+  FromTableStatement<TParameterType>* subquery_from_parent_;
   std::string table_alias_;
+  std::shared_ptr<WhereStatement<TParameterType>> where_;
+  std::shared_ptr<OrderByStatement<TParameterType>> order_by_;
 
  public:
-  explicit SelectBlock(uint32_t current_param_index)
-      : current_param_index_(current_param_index),
-        level_(0),
-        join_blocks_(),
-        from_table_(*this, level_),
-        fields_(),
-        parameter_values_(),
-        subquery_from_parent_(nullptr),
-        table_alias_() {}
+  explicit NvSelect(uint32_t current_param_index)
+                  : current_param_index_(current_param_index),
+                    level_(0),
+                    join_blocks_(),
+                    from_table_(*this, level_),
+                    fields_(),
+                    parameter_values_(),
+                    subquery_from_parent_(nullptr),
+                    table_alias_(),
+                    where_(nullptr),
+                    order_by_(nullptr) {}
 
-  explicit SelectBlock(uint32_t current_param_index, uint32_t level)
-      : current_param_index_(current_param_index),
-        level_(level),
-        join_blocks_(),
-        from_table_(*this, level),
-        fields_(),
-        parameter_values_(),
-        subquery_from_parent_(nullptr),
-        table_alias_() {}
+  explicit NvSelect(uint32_t current_param_index, uint32_t level)
+                  : current_param_index_(current_param_index),
+                    level_(level),
+                    join_blocks_(),
+                    from_table_(*this, level),
+                    fields_(),
+                    parameter_values_(),
+                    subquery_from_parent_(nullptr),
+                    table_alias_(),
+                    where_(nullptr),
+                    order_by_(nullptr) {}
 
-  explicit SelectBlock(uint32_t current_param_index, uint32_t level,
-                       FromTableBlock<TParameterType>* from_obj,
-                       const std::string& table_alias)
-      : current_param_index_(current_param_index),
-        level_(level),
-        join_blocks_(),
-        from_table_(*this, level),
-        fields_(),
-        parameter_values_(),
-        subquery_from_parent_(from_obj),
-        table_alias_(std::string(table_alias)) {}
+  explicit NvSelect(uint32_t current_param_index, uint32_t level,
+                           FromTableStatement<TParameterType>* from_obj,
+                           const std::string& table_alias)
+                  : current_param_index_(current_param_index),
+                    level_(level),
+                    join_blocks_(),
+                    from_table_(*this, level),
+                    fields_(),
+                    parameter_values_(),
+                    subquery_from_parent_(from_obj),
+                    table_alias_(std::string(table_alias)),
+                    where_(nullptr),
+                    order_by_(nullptr) {}
 
-  ~SelectBlock() {}
+  ~NvSelect() {}
 
-  uint32_t GetCurrentParamIndex() const { return current_param_index_; }
+  uint32_t GetCurrentParamIndex() const {
+    return current_param_index_;
+  }
 
   void SetCurrentParamIndex(uint32_t current_param_index) {
     current_param_index_ = current_param_index;
   }
 
-  uint32_t GetBlockLevel() const { return level_; }
+  uint32_t GetBlockLevel() const {
+    return level_;
+  }
 
   template <typename T>
-  SelectBlock& Field(const std::string& field) {
+  NvSelect& Field(const std::string& field) {
     return Field<T>(field, std::nullopt, std::nullopt,
                     SqlAggregateFunction::None, false);
   }
 
   template <typename T>
-  SelectBlock& Field(const std::string& field,
-                     const std::optional<std::string>& table_alias) {
+  NvSelect& Field(const std::string& field,
+                         const std::optional<std::string>& table_alias) {
     return Field<T>(field, table_alias, std::nullopt,
                     SqlAggregateFunction::None, false);
   }
 
   template <typename T>
-  SelectBlock& Field(const std::string& field,
-                     const std::optional<std::string>& table_alias,
-                     const std::optional<std::string>& field_alias) {
+  NvSelect& Field(const std::string& field,
+                         const std::optional<std::string>& table_alias,
+                         const std::optional<std::string>& field_alias) {
     return Field<T>(field, table_alias, field_alias, SqlAggregateFunction::None,
                     false);
   }
 
   template <typename T>
-  SelectBlock& Field(const std::string& field,
-                     const std::optional<std::string>& table_alias,
-                     SqlAggregateFunction aggregate_fn) {
+  NvSelect& Field(const std::string& field,
+                         const std::optional<std::string>& table_alias,
+                         SqlAggregateFunction aggregate_fn) {
     return Field<T>(field, table_alias, std::nullopt, aggregate_fn, false);
   }
 
   template <typename T>
-  SelectBlock& Field(const std::string& field,
-                     const std::optional<std::string>& table_alias,
-                     const std::optional<std::string>& field_alias,
-                     SqlAggregateFunction aggregate_fn,
-                     bool enclose_field_name) {
+  NvSelect& Field(const std::string& field,
+                         const std::optional<std::string>& table_alias,
+                         const std::optional<std::string>& field_alias,
+                         SqlAggregateFunction aggregate_fn,
+                         bool enclose_field_name) {
     fields_.emplace_back(
         FieldDef<TParameterType>(field, table_alias, enclose_field_name,
                                  aggregate_fn, field_alias, level_));
@@ -765,10 +779,10 @@ class SelectBlock {
   }
 
   /// @brief End of Subquery inside From statement [Match:
-  /// From().AddSubquery()]. When use on root level will thrown std::runtime
+  /// From().BeginSubquery()]. When use on root level will thrown std::runtime
   /// error.
   /// @return
-  FromTableBlock<TParameterType>& EndSubqueryInsideFrom() {
+  FromTableStatement<TParameterType>& EndSubqueryInsideFrom() {
     if (!subquery_from_parent_)
       throw std::runtime_error("Call this only from .From().EndFromSubquery()");
 
@@ -777,7 +791,7 @@ class SelectBlock {
     // return from_table_;
   }
 
-  FromTableBlock<TParameterType>& From() {
+  FromTableStatement<TParameterType>& From() {
     try {
       return from_table_;
     } catch (const std::exception& e) {
@@ -786,9 +800,27 @@ class SelectBlock {
     }
   }
 
-  SelectBlock& EndBlock() { return *this; }
+  WhereStatement<TParameterType>& Where() {
+    // TARGET CONST
+    // / explicit WhereStatement(NvSelect<TParamaterType>* parent,
+    //                       uint32_t current_param_index, uint32_t level)
+    //   : parent_(parent),
+    //     values_(std::make_shared<std::vector<TParamaterType>>()),
+    //     clause_(std::make_shared<RecordClause<TParamaterType>>(
+    //         *this, current_param_index, values_)),
+    //     level_(level) {}
 
-  JoinBlock<TParameterType>& CreateJoinBlock() {
+    if (!where_)
+      where_ = std::make_shared<WhereStatement<TParameterType>>(
+          this, current_param_index_, level_);
+    return *where_;
+  }
+
+  NvSelect& EndBlock() {
+    return *this;
+  }
+
+  JoinStatement<TParameterType>& Join() {
     try {
       join_blocks_.emplace_back(*this, level_);
       return join_blocks_.back();
@@ -799,7 +831,16 @@ class SelectBlock {
     }
   }
 
-  // SelectBlock& FnCall(const std::string& fn_name,
+  OrderByStatement<TParameterType>& OrderBy() {
+    if (!order_by_) {
+      order_by_ =
+          std::make_shared<OrderByStatement<TParameterType>>(this, level_);
+    }
+
+    return *order_by_;
+  }
+
+  // NvSelect& FnCall(const std::string& fn_name,
   //                     const std::vector<std::string>& param_values) {
   //   std::ostringstream fn_call;
   //   fn_call << fn_name << "(";
@@ -812,7 +853,7 @@ class SelectBlock {
   //   return *this;
   // }
 
-  // SelectBlock& FnCall(const std::string& fn_name,
+  // NvSelect& FnCall(const std::string& fn_name,
   //                     const std::string& parameter_format,
   //                     const std::vector<TParameterType>& param_values) {
   //   std::ostringstream fn_call;
@@ -848,7 +889,8 @@ class SelectBlock {
                   : "SELECT ");
     bool first_element = true;
     for (const auto& field : fields_) {
-      if (!first_element) query << (pretty_print ? ", \n" : ", ");
+      if (!first_element)
+        query << (pretty_print ? ",\n" : ", ");
       query << (pretty_print ? GenerateIndentation(level_ + 1) : "")
             << field.GenerateQuery();
       first_element = false;
@@ -870,9 +912,22 @@ class SelectBlock {
     }
 
     // WHERE
+    if (where_ != nullptr) {
+      query << (pretty_print ? "\n" + GenerateIndentation(level_) + "WHERE \n"
+                             : " WHERE ");
+      query << (pretty_print ? GenerateIndentation(level_ + 1) : "")
+            << where_->GenerateQuery(pretty_print, false);
+    }
+
     // GROUP BY
     // HAVING BY
     // ORDER BY
+    if (order_by_ != nullptr) {
+      query << (pretty_print ? GenerateIndentation(level_) + "\nORDER BY \n"
+                             : " ORDER BY ");
+      query << (pretty_print ? GenerateIndentation(level_ + 1) : "")
+            << order_by_->GenerateQuery(pretty_print);
+    }
     // LIMIT
 
     // RESULT
@@ -881,7 +936,9 @@ class SelectBlock {
     return query.str();
   }
 
-  std::vector<TParameterType> Values() const { return parameter_values_; }
+  std::vector<TParameterType> Values() const {
+    return parameter_values_;
+  }
 
   template <typename... FieldTypes>
   auto GenerateTuplesHolder() {
@@ -893,24 +950,27 @@ class SelectBlock {
 
 template <typename TParameterType>
 std::string JoinDef<TParameterType>::GenerateJoinRecordSubqueryObject() const {
-  if (!subquery_obj_) return std::string();
+  if (!subquery_obj_)
+    return std::string();
   return subquery_obj_->GenerateQuery();
 };
 
 template <typename TParameterType>
-std::string JoinBlock<TParameterType>::__GenerateSelectBlock(
-    const SelectBlock<TParameterType>& select) {
+std::string JoinStatement<TParameterType>::__GenerateSelectBlock(
+    const NvSelect<TParameterType>& select) {
   return select.GenerateQuery();
 }
 
 template <typename TParameterType>
-uint32_t FromTableBlock<TParameterType>::__GetCurrentParameterIndexFromParent(
-    const SelectBlock<TParameterType>& select) const {
+uint32_t
+FromTableStatement<TParameterType>::__GetCurrentParameterIndexFromParent(
+    const NvSelect<TParameterType>& select) const {
   return select.GetCurrentParamIndex();
 }
 
 template <typename TParameterType>
-SelectBlock<TParameterType>& FromTableBlock<TParameterType>::AddSubquery(
+NvSelect<TParameterType>&
+FromTableStatement<TParameterType>::BeginSubquery(
     const std::string& table_alias) {
   uint32_t index;
   if (subqueries_.empty()) {
@@ -925,15 +985,15 @@ SelectBlock<TParameterType>& FromTableBlock<TParameterType>::AddSubquery(
 }
 
 template <typename TParameterType>
-void FromTableBlock<TParameterType>::__CreateNewSelectBlock(
-    std::vector<SelectBlock<TParameterType>>& selects, uint32_t index,
+void FromTableStatement<TParameterType>::__CreateNewSelectBlock(
+    std::vector<NvSelect<TParameterType>>& selects, uint32_t index,
     uint32_t level, const std::string& table_alias) {
   selects.emplace_back(index, level, this, table_alias);
 }
 
 template <typename TParameterType>
-std::string FromTableBlock<TParameterType>::__GenerateSelectQuery(
-    const SelectBlock<TParameterType>& select, bool pretty_print) const {
+std::string FromTableStatement<TParameterType>::__GenerateSelectQuery(
+    const NvSelect<TParameterType>& select, bool pretty_print) const {
   return select.GenerateQuery(pretty_print);
 }
 

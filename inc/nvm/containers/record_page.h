@@ -32,8 +32,9 @@ struct Page {
   Page() : page(1), item_per_page(30), is_paging(true){};
 
   explicit Page(size_t page, size_t item_per_page = 30, bool is_paging = true)
-      : page(page), item_per_page(item_per_page), is_paging(is_paging) {}
-
+                  : page(page),
+                    item_per_page(item_per_page),
+                    is_paging(is_paging) {}
 };
 
 class RecordPage final {
@@ -45,13 +46,15 @@ class RecordPage final {
  public:
   /// Constructor initializing total items and items per page
   explicit RecordPage(size_t total_items, uint32_t items_per_page)
-      : total_items_(total_items),
-        items_per_page_(items_per_page),
-        total_pages_(
-            std::ceil(static_cast<double>(total_items_) / items_per_page_)) {}
+                  : total_items_(total_items),
+                    items_per_page_(items_per_page),
+                    total_pages_(std::ceil(static_cast<double>(total_items_) /
+                                           items_per_page_)) {}
 
   /// Returns the total number of pages
-  size_t Pages() const { return total_pages_; }
+  size_t Pages() const {
+    return total_pages_;
+  }
 
   /// Calculates the starting offset for the requested page
   size_t GetPageOffset(size_t page) const {
@@ -62,10 +65,14 @@ class RecordPage final {
   }
 
   /// Accessor for total items
-  size_t TotalItems() const { return total_items_; }
+  size_t TotalItems() const {
+    return total_items_;
+  }
 
   /// Accessor for items per page
-  int32_t ItemsPerPage() const { return items_per_page_; }
+  int32_t ItemsPerPage() const {
+    return items_per_page_;
+  }
 };
 }  // namespace nvm::containers
 #endif

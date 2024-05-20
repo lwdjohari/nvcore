@@ -48,7 +48,7 @@ struct RecordTable {
 
   explicit RecordTable(const std::string& name,
                        std::optional<std::string> alias = std::nullopt)
-      : name(std::string(name)), alias(alias) {}
+                  : name(std::string(name)), alias(alias) {}
 };
 
 enum class FieldPinMode : uint16_t { None = 0, Beginning = 1, End = 2 };
@@ -77,6 +77,58 @@ NVM_ENUM_CLASS_DISPLAY_TRAIT(SqlOperator)
 enum class LogicOperator { kAnd, kOr };
 
 NVM_ENUM_CLASS_DISPLAY_TRAIT(LogicOperator)
+
+enum class SqlAggregateFunction {
+  None = 0,
+  Distinct = 1,
+  Count = 2,
+  Avg = 3,
+  Sum = 4,
+  ToUpper = 5,
+  ToLower = 6,
+  ToIso8601DateTime = 7,
+  ToIso8601Date = 8,
+  ToIso8601Time = 9
+};
+
+NVM_ENUM_CLASS_DISPLAY_TRAIT(SqlAggregateFunction)
+
+enum class SqlJoinType {
+  None = 0,
+  InnerJoin = 1,
+  LeftJoin = 2,
+  RightJoin = 4,
+};
+
+NVM_ENUM_CLASS_DISPLAY_TRAIT(SqlJoinType)
+
+enum class JoinDefMode {
+  RecordKeyBoth = 0,
+  SubquerySelectString = 1,
+  SubqueryRawString = 2,
+  SubquerySelectObject = 3
+};
+
+NVM_ENUM_CLASS_DISPLAY_TRAIT(JoinDefMode)
+
+// Forward declaration WhereStatement
+template <typename TParamaterType = DefaultPostgresParamType>
+class WhereStatement;
+
+// Forward declaration Order By
+template <typename TParameterType = DefaultPostgresParamType>
+class OrderByStatement;
+
+// Forward declaration Group By
+class GroupByStatement;
+
+// Forward declaration HavingByStatement
+template <typename TParamaterType = DefaultPostgresParamType>
+class HavingByStatement;
+
+// Forward declaration for NvSelect
+template <typename TParameterType = DefaultPostgresParamType>
+class NvSelect;
 
 inline std::string SqlOperatorToString(SqlOperator op) {
   switch (op) {
@@ -116,7 +168,8 @@ inline std::string LogicOperatorToString(LogicOperator logic) {
 
 inline std::string GenerateIndentation(uint32_t level, char indent_char = ' ',
                                        uint32_t number_per_print = 2) {
-  if (level == 0) return std::string();
+  if (level == 0)
+    return std::string();
   int32_t n = number_per_print * level;
   std::ostringstream oss;
   for (int i = 0; i < n; ++i) {

@@ -23,16 +23,15 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <string>
 #include <type_traits>
 #include <variant>
 #include <vector>
-#include <set>
 
 #include "nvm/containers/record_def.h"
 namespace nvm::containers {
-
 
 template <typename TParamaterType = DefaultPostgresParamType>
 class RecordInsert {
@@ -47,16 +46,16 @@ class RecordInsert {
 
  public:
   explicit RecordInsert(
-      const std::string& table_name,
-      uint32_t start_param_index = 1,
-      std::shared_ptr<std::vector<TParamaterType>> parameter_values = 
+      const std::string& table_name, uint32_t start_param_index = 1,
+      std::shared_ptr<std::vector<TParamaterType>> parameter_values =
           std::make_shared<std::vector<TParamaterType>>())
-      : table_name_(table_name),
-        current_param_index_(start_param_index),
-        values_(parameter_values) {}
+                  : table_name_(table_name),
+                    current_param_index_(start_param_index),
+                    values_(parameter_values) {}
 
   template <typename T>
-  RecordInsert<TParamaterType>& AddValue(const std::string& column_name, const T& value) {
+  RecordInsert<TParamaterType>& AddValue(const std::string& column_name,
+                                         const T& value) {
     if (!columns_.str().empty()) {
       columns_ << ", ";
       sstr_ << ", ";
@@ -86,9 +85,13 @@ class RecordInsert {
     return ss.str();
   }
 
-  std::shared_ptr<std::vector<TParamaterType>> Values() const { return values_; }
+  std::shared_ptr<std::vector<TParamaterType>> Values() const {
+    return values_;
+  }
 
-  std::set<std::string> Columns() const { return column_names_; }
+  std::set<std::string> Columns() const {
+    return column_names_;
+  }
 };
 
 template <typename TParamaterType = DefaultPostgresParamType>
@@ -104,16 +107,16 @@ class RecordUpdate {
 
  public:
   explicit RecordUpdate(
-      const std::string& table_name,
-      uint32_t start_param_index = 1,
-      std::shared_ptr<std::vector<TParamaterType>> parameter_values = 
+      const std::string& table_name, uint32_t start_param_index = 1,
+      std::shared_ptr<std::vector<TParamaterType>> parameter_values =
           std::make_shared<std::vector<TParamaterType>>())
-      : table_name_(table_name),
-        current_param_index_(start_param_index),
-        values_(parameter_values) {}
+                  : table_name_(table_name),
+                    current_param_index_(start_param_index),
+                    values_(parameter_values) {}
 
   template <typename T>
-  RecordUpdate<TParamaterType>& SetValue(const std::string& column_name, const T& value) {
+  RecordUpdate<TParamaterType>& SetValue(const std::string& column_name,
+                                         const T& value) {
     if (!set_clause_.str().empty()) {
       set_clause_ << ", ";
     }
@@ -129,7 +132,9 @@ class RecordUpdate {
     if (!where_clause_.str().empty()) {
       where_clause_ << " AND ";
     }
-    where_clause_ << field_name << " " << SqlOperatorToString(op) << " $" << current_param_index_++;
+
+    where_clause_ << field_name << " " << SqlOperatorToString(op) << " $"
+                  << current_param_index_++;
     values_->push_back(value);
     return *this;
   }
@@ -138,6 +143,7 @@ class RecordUpdate {
     if (!returning_clause_.str().empty()) {
       returning_clause_ << ", ";
     }
+
     returning_clause_ << column_name;
     return *this;
   }
@@ -145,18 +151,25 @@ class RecordUpdate {
   std::string ToString() const {
     std::ostringstream ss;
     ss << "UPDATE " << table_name_ << " SET " << set_clause_.str();
+
     if (!where_clause_.str().empty()) {
       ss << " WHERE " << where_clause_.str();
     }
+
     if (!returning_clause_.str().empty()) {
       ss << " RETURNING " << returning_clause_.str();
     }
+
     return ss.str();
   }
 
-  std::shared_ptr<std::vector<TParamaterType>> Values() const { return values_; }
+  std::shared_ptr<std::vector<TParamaterType>> Values() const {
+    return values_;
+  }
 
-  std::set<std::string> Columns() const { return column_names_; }
+  std::set<std::string> Columns() const {
+    return column_names_;
+  }
 };
 
 template <typename TParamaterType = DefaultPostgresParamType>
@@ -171,13 +184,12 @@ class RecordDelete {
 
  public:
   explicit RecordDelete(
-      const std::string& table_name,
-      uint32_t start_param_index = 1,
-      std::shared_ptr<std::vector<TParamaterType>> parameter_values = 
+      const std::string& table_name, uint32_t start_param_index = 1,
+      std::shared_ptr<std::vector<TParamaterType>> parameter_values =
           std::make_shared<std::vector<TParamaterType>>())
-      : table_name_(table_name),
-        current_param_index_(start_param_index),
-        values_(parameter_values) {}
+                  : table_name_(table_name),
+                    current_param_index_(start_param_index),
+                    values_(parameter_values) {}
 
   template <typename T>
   RecordDelete<TParamaterType>& AddCondition(const std::string& field_name,
@@ -185,9 +197,12 @@ class RecordDelete {
     if (!where_clause_.str().empty()) {
       where_clause_ << " AND ";
     }
-    where_clause_ << field_name << " " << SqlOperatorToString(op) << " $" << current_param_index_++;
+
+    where_clause_ << field_name << " " << SqlOperatorToString(op) << " $"
+                  << current_param_index_++;
     values_->push_back(value);
     column_names_.insert(field_name);
+
     return *this;
   }
 
@@ -195,6 +210,7 @@ class RecordDelete {
     if (!returning_clause_.str().empty()) {
       returning_clause_ << ", ";
     }
+
     returning_clause_ << column_name;
     return *this;
   }
@@ -202,18 +218,25 @@ class RecordDelete {
   std::string ToString() const {
     std::ostringstream ss;
     ss << "DELETE FROM " << table_name_;
+
     if (!where_clause_.str().empty()) {
       ss << " WHERE " << where_clause_.str();
     }
+
     if (!returning_clause_.str().empty()) {
       ss << " RETURNING " << returning_clause_.str();
     }
+
     return ss.str();
   }
 
-  std::shared_ptr<std::vector<TParamaterType>> Values() const { return values_; }
+  std::shared_ptr<std::vector<TParamaterType>> Values() const {
+    return values_;
+  }
 
-  std::set<std::string> Columns() const { return column_names_; }
+  std::set<std::string> Columns() const {
+    return column_names_;
+  }
 };
 
 }  // namespace nvm::containers
