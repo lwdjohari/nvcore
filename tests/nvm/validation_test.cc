@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include "catch2/catch_all.hpp"
-#include "nvm/containers/validations.h"
+#include "nvm/containers/nv_validator.h"
 
 using namespace nvm;
 
