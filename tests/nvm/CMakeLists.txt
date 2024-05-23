@@ -18,6 +18,7 @@ set(TEST_SOURCES
     record_test.cc
     validation_test.cc
     select_test.cc
+    struct_mapper_test.cc
     # Add more test files if needed
 )
 
