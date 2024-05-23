@@ -23,27 +23,110 @@
 #include <string>
 #include <tuple>
 
-namespace nvm::structMapper {
+namespace nvm::mapper {
 
-template <typename From, typename To>
+template <typename TSourceType, typename TDestType>
 struct TypeCaster {
-  static To cast(const From& from) {
-    return static_cast<To>(from);
+  static TDestType Cast(const TSourceType& source) {
+    static_assert(std::is_convertible_v<TSourceType, TDestType>,
+                  "No suitable conversion found for these types.");
+    return static_cast<TDestType>(source);
+  }
+};
+
+static std::string ToString(const char* from) {
+  return std::string(from);
+};
+
+template <>
+struct TypeCaster<const char*, std::string> {
+  static std::string Cast(const char* from) {
+    return std::string(from);
   }
 };
 
 template <>
 struct TypeCaster<int32_t, uint32_t> {
-  static uint32_t cast(const int32_t& from) {
-    return static_cast<uint32_t>(from);
+  static uint32_t Cast(const int32_t& source) {
+    return static_cast<uint32_t>(source);
   }
 };
 
 template <>
 struct TypeCaster<int64_t, std::chrono::system_clock::time_point> {
-  static std::chrono::system_clock::time_point cast(const int64_t& from) {
+  static std::chrono::system_clock::time_point Cast(const int64_t& source) {
     return std::chrono::system_clock::time_point(
-        std::chrono::system_clock::duration(from));
+        std::chrono::system_clock::duration(source));
+  }
+};
+
+template <>
+struct TypeCaster<int8_t, std::string> {
+  static std::string Cast(const int8_t& source) {
+    return std::to_string(source);
+  }
+};
+
+template <>
+struct TypeCaster<int16_t, std::string> {
+  static std::string Cast(const int16_t& source) {
+    return std::to_string(source);
+  }
+};
+
+template <>
+struct TypeCaster<int32_t, std::string> {
+  static std::string Cast(const int32_t& source) {
+    return std::to_string(source);
+  }
+};
+
+template <>
+struct TypeCaster<int64_t, std::string> {
+  static std::string Cast(const int64_t& source) {
+    return std::to_string(source);
+  }
+};
+
+template <>
+struct TypeCaster<uint8_t, std::string> {
+  static std::string Cast(const uint8_t& source) {
+    return std::to_string(source);
+  }
+};
+
+template <>
+struct TypeCaster<uint16_t, std::string> {
+  static std::string Cast(const uint16_t& source) {
+    return std::to_string(source);
+  }
+};
+
+template <>
+struct TypeCaster<uint32_t, std::string> {
+  static std::string Cast(const uint32_t& source) {
+    return std::to_string(source);
+  }
+};
+
+template <>
+struct TypeCaster<uint64_t, std::string> {
+  static std::string Cast(const uint64_t& source) {
+    return std::to_string(source);
+  }
+};
+
+template <>
+struct TypeCaster<float, std::string> {
+  static std::string Cast(const float& source) {
+    return std::to_string(source);
+  }
+};
+
+template <>
+struct TypeCaster<double, std::string> {
+  static std::string Cast(const double& source) {
+    return std::to_string(source);
   }
 };
 
@@ -51,7 +134,7 @@ template <typename T, typename Tuple, std::size_t... I>
 T MakeStructFromTuple_Impl(const Tuple& t, std::index_sequence<I...>) {
   return T{TypeCaster<std::tuple_element_t<I, Tuple>,
                       typename std::tuple_element<I, typename T::types>::type>::
-               cast(std::get<I>(t))...};
+               Cast(std::get<I>(t))...};
 }
 
 template <typename T, typename Tuple>
@@ -60,4 +143,12 @@ T MakeStructFromTuple(const Tuple& t) {
       t, std::make_index_sequence<std::tuple_size<Tuple>::value>{});
 }
 
-}  // namespace nvm::structMapper
+/// @brief Generic struct mapper template
+/// @tparam TFrom
+/// @tparam TDest
+template <typename TFrom, typename TDest>
+struct Mapper {
+  static TDest Map(const TFrom& from);
+};
+
+}  // namespace nvm::mapper
