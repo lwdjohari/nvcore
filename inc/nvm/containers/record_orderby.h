@@ -76,23 +76,23 @@ class OrderByStatement {
                             uint32_t level)
                   : parent_(parent), sorts_(), level_(level) {}
 
-  OrderByStatement& OrderByAsc(
+  OrderByStatement& Asc(
       const std::string& field_name,
       const std::optional<std::string>& table_alias = std::nullopt,
       bool define_sort_type = true) {
-    return OrderBy(field_name, table_alias, SortType::Ascending,
+    return By(field_name, table_alias, SortType::Ascending,
                    define_sort_type);
   }
 
-  OrderByStatement& OrderByDesc(
+  OrderByStatement& Desc(
       const std::string& field_name,
       const std::optional<std::string>& table_alias = std::nullopt,
       bool define_sort_type = true) {
-    return OrderBy(field_name, table_alias, SortType::Descending,
+    return By(field_name, table_alias, SortType::Descending,
                    define_sort_type);
   }
 
-  OrderByStatement& OrderBy(
+  OrderByStatement& By(
       const std::string& field_name,
       const std::optional<std::string>& table_alias = std::nullopt,
       const SortType sort_type = SortType::Ascending,

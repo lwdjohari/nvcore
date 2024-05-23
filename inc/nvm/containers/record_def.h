@@ -22,9 +22,15 @@
 
 #include <nvm/macro.h>
 
+#include <chrono>
 #include <cstdint>
+#include <iomanip>
+#include <iostream>
 #include <memory>
 #include <optional>
+#include <sstream>
+#include <string>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -112,7 +118,7 @@ enum class JoinDefMode {
 NVM_ENUM_CLASS_DISPLAY_TRAIT(JoinDefMode)
 
 // Forward declaration WhereStatement
-template <typename TParamaterType = DefaultPostgresParamType>
+template <typename TParameterType = DefaultPostgresParamType>
 class WhereStatement;
 
 // Forward declaration Order By
@@ -124,7 +130,7 @@ template <typename TParameterType = DefaultPostgresParamType>
 class GroupByStatement;
 
 // Forward declaration HavingByStatement
-template <typename TParamaterType = DefaultPostgresParamType>
+template <typename TParameterType = DefaultPostgresParamType>
 class HavingByStatement;
 
 // Forward declaration for NvSelect
@@ -179,6 +185,194 @@ inline std::string GenerateIndentation(uint32_t level, char indent_char = ' ',
   return oss.str();
 }
 
+template <typename TParameterType = DefaultPostgresParamType>
+class ParameterParser {
+ public:
+  explicit ParameterParser(
+      std::shared_ptr<std::vector<TParameterType>> parameter_values)
+      : parameter_values_(parameter_values) {}
+
+  virtual ~ParameterParser() = default;
+
+  template <typename TParameterDestType>
+  std::shared_ptr<std::vector<TParameterDestType>> Parse() {
+    return ParseImpl<TParameterDestType>();
+  }
+
+  virtual std::string GetAllParameterValuesAsString() const {
+    std::ostringstream oss;
+    for (const auto& value : *parameter_values_) {
+      std::visit([this, &oss](const auto& val) { AppendValue(oss, val); }, value);
+      oss << std::endl;
+    }
+    return oss.str();
+  }
+
+ protected:
+  std::shared_ptr<std::vector<TParameterType>> parameter_values_;
+
+  virtual std::shared_ptr<void> ParseImplInternal() const = 0;
+
+ private:
+  template <typename TParameterDestType>
+  std::shared_ptr<std::vector<TParameterDestType>> ParseImpl() const {
+    return std::static_pointer_cast<std::vector<TParameterDestType>>(ParseImplInternal());
+  }
+
+  template <typename T>
+  void AppendValue(std::ostringstream& oss, const T& value) const {
+    if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
+      std::time_t time = std::chrono::system_clock::to_time_t(value);
+      oss << std::put_time(std::localtime(&time), "%F %T");
+    } else if constexpr (is_vector<T>::value) {
+      AppendVector(oss, value);
+    } else {
+      oss << value;
+    }
+  }
+
+  template <typename T>
+  void AppendVectorValue(std::ostringstream& oss, const T& value) const {
+    if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
+      std::time_t time = std::chrono::system_clock::to_time_t(value);
+      oss << std::put_time(std::localtime(&time), "%F %T");
+    } else {
+      oss << value;
+    }
+  }
+
+  template <typename T>
+  void AppendVector(std::ostringstream& oss, const std::vector<T>& vec) const {
+    oss << "[";
+    for (size_t i = 0; i < vec.size(); ++i) {
+      AppendVectorValue(oss, vec[i]);
+      if (i < vec.size() - 1) {
+        oss << ", ";
+      }
+    }
+    oss << "]";
+  }
+
+  void AppendVector(std::ostringstream& oss, const std::vector<bool>& vec) const {
+    oss << "[";
+    for (size_t i = 0; i < vec.size(); ++i) {
+      oss << (vec[i] ? "true" : "false");
+      if (i < vec.size() - 1) {
+        oss << ", ";
+      }
+    }
+    oss << "]";
+  }
+
+  // Helper trait to check if a type is a vector
+  template <typename T>
+  struct is_vector : std::false_type {};
+
+  template <typename T>
+  struct is_vector<std::vector<T>> : std::true_type {};
+};
+
+// Example of a derived class
+template <typename TParameterType>
+class CustomParameterParser : public ParameterParser<TParameterType> {
+ public:
+  using ParameterParser<TParameterType>::ParameterParser;
+
+ protected:
+  std::shared_ptr<void> ParseImplInternal() const override {
+    // Implement the actual parsing logic here
+    return std::make_shared<std::vector<TParameterType>>();
+  }
+};
+
+template <typename TParameterType = DefaultPostgresParamType>
+class PostgresDefaultParameterParser : public ParameterParser<TParameterType> {
+ public:
+  using ParameterParser<TParameterType>::ParameterParser;
+
+ protected:
+  std::shared_ptr<void> ParseImplInternal() const override {
+    // Implement the actual parsing logic here
+    // For simplicity, returning the same parameter values cast to void
+    return std::make_shared<std::vector<TParameterType>>(*this->parameter_values_);
+  }
+};
+
+// template <typename TParameterType = DefaultPostgresParamType>
+// class ParameterParser {
+//   std::shared_ptr<TParameterType> parameter_values_;
+
+//   template <typename T>
+//   virtual void AppendValue(std::ostringstream& oss, const T& value) {
+//     if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
+//       std::time_t time = std::chrono::system_clock::to_time_t(value);
+//       oss << std::put_time(std::localtime(&time), "%F %T");
+//     } else if constexpr (std::is_same_v<T, std::vector<int>> ||
+//                          std::is_same_v<T, std::vector<long long>> ||
+//                          std::is_same_v<T, std::vector<float>> ||
+//                          std::is_same_v<T, std::vector<double>> ||
+//                          std::is_same_v<T, std::vector<std::string>> ||
+//                          std::is_same_v<T, std::vector<bool>> ||
+//                          std::is_same_v<
+//                              T, std::vector<
+//                                     std::chrono::system_clock::time_point>>) {
+//       AppendVector(oss, value);
+//     } else {
+//       oss << value;
+//     }
+//   }
+
+//   template <typename T>
+//   virtual void AppendVectorValue(std::ostringstream& oss, const T& value) {
+//     if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
+//       std::time_t time = std::chrono::system_clock::to_time_t(value);
+//       oss << std::put_time(std::localtime(&time), "%F %T");
+//     } else {
+//       oss << value;
+//     }
+//   }
+
+//   template <typename T>
+//   virtual void AppendVector(std::ostringstream& oss,
+//                             const std::vector<T>& vec) {
+//     oss << "[";
+//     for (size_t i = 0; i < vec.size(); ++i) {
+//       AppendVectorValue(oss, vec[i]);
+//       if (i < vec.size() - 1)
+//         oss << ", ";
+//     }
+//     oss << "]";
+//   }
+
+//   void AppendVector(std::ostringstream& oss, const std::vector<bool>& vec) {
+//     oss << "[";
+//     for (size_t i = 0; i < vec.size(); ++i) {
+//       oss << (vec[i] ? "true" : "false");
+//       if (i < vec.size() - 1)
+//         oss << ", ";
+//     }
+//     oss << "]";
+//   }
+
+//  public:
+//   explicit ParameterParser(
+//       std::shared_ptr<std::vector<TParameterType>> parameter_values)
+//                   : parameter_values_(parameter_values) {}
+
+//   template <typename TParameterDestType>
+//   virtual std::shared_ptr<std::vector<TParameterDestType>> Parse() {
+//     return parameter_values_;
+//   }
+
+//   virtual std::string GetAllParameterValuesAsString() const {
+//     std::ostringstream oss;
+//     for (const auto& value : *parameter_values_) {
+//       std::visit([&oss](const auto& val) { AppendValue(oss, val); }, value);
+//       oss << std::endl;
+//     }
+//     return oss.str();
+//   }
+// };
 }  // namespace nvm::containers
 
 #endif

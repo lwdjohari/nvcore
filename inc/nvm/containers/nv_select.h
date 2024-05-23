@@ -305,16 +305,17 @@ class JoinStatement {
   uint32_t level_;
 
  public:
-  explicit JoinStatement(NvSelect<TParameterType>& parent, uint32_t level)
+  explicit JoinStatement(NvSelect<TParameterType>& parent,
+                         uint32_t parameter_index, uint32_t level)
                   : parent_(parent),
                     joins_(),
                     // subquery_(nullptr),
-                    current_parameter_index_(),
+                    current_parameter_index_(parameter_index),
                     level_(level) {}
 
   NvSelect<TParameterType>& EndJoinBlock() {
     // sync the current_parameter
-
+    parent_.UpdateCurrentParamIndex(current_parameter_index_);
     return parent_;
   };
 
@@ -479,19 +480,24 @@ struct FromTable {
 template <typename TParameterType = DefaultPostgresParamType>
 class FromTableStatement {
  private:
-  NvSelect<TParameterType>& parent_;
+  NvSelect<TParameterType>* parent_;
   std::vector<FromTable> tables_;
   std::vector<NvSelect<TParameterType>> subqueries_;
+  std::shared_ptr<std::vector<TParameterType>> parameter_values_;
   uint32_t level_;
-  uint32_t last_current_index_returned_;
+  uint32_t current_parameter_index_;
 
  public:
-  explicit FromTableStatement(NvSelect<TParameterType>& parent, uint32_t level)
+  explicit FromTableStatement(
+      std::shared_ptr<std::vector<TParameterType>> values,
+      NvSelect<TParameterType>* parent, uint32_t parameter_index,
+      uint32_t level)
                   : parent_(parent),
                     tables_(),
+                    parameter_values_(values),
                     subqueries_(),
                     level_(uint32_t(level)),
-                    last_current_index_returned_() {}
+                    current_parameter_index_(parameter_index) {}
 
   ~FromTableStatement() {}
 
@@ -515,7 +521,11 @@ class FromTableStatement {
   }
 
   uint32_t GetCurrentParameterIndex() const {
-    return last_current_index_returned_;
+    return current_parameter_index_;
+  }
+
+  void UpdateCurrentParamIndex(uint32_t param_index){
+    current_parameter_index_ = param_index;
   }
 
   uint32_t __GetCurrentParameterIndexFromParent(
@@ -536,7 +546,7 @@ class FromTableStatement {
   NvSelect<TParameterType>& Reset() {
     subqueries_.clear();
     tables_.clear();
-    last_current_index_returned_ = 0;
+    current_parameter_index_ = 0;
     return parent_;
   }
 
@@ -548,9 +558,12 @@ class FromTableStatement {
   /// .EndSubqueryInsideFromBlock() to return back to FROM block stement.
   /// @return
   NvSelect<TParameterType>& EndFromTableBlock() {
-    // std::cout << "LEVEL:" << level_ << std::endl;
-    // std::cout << &parent_ << std::endl;
-    return parent_;
+    if (!parent_) {
+      throw std::runtime_error("EndFromTableBlock() null-reference to parent_");
+    }
+
+    parent_->UpdateCurrentParamIndex(current_parameter_index_);
+    return *parent_;
   }
 
   std::string GenerateQuery(bool pretty_print = false) const {
@@ -576,62 +589,6 @@ class FromTableStatement {
     return query.str();
   }
 };
-
-// template <typename TParameterType = DefaultPostgresParamType>
-// struct FieldDef {
-//   std::string field;
-//   std::optional<std::string> table_alias;
-//   bool enclose_field_name;
-//   SqlAggregateFunction aggregate_fn;
-//   std::optional<std::string> field_alias;
-
-//   explicit FieldDef(
-//       const std::string& field,
-//       const std::optional<std::string>& table_alias = std::nullopt,
-//       bool enclose_field_name = false,
-//       SqlAggregateFunction aggregate_fn = SqlAggregateFunction::None,
-//       const std::optional<std::string>& field_alias = std::nullopt)
-//       : field(field),
-//         table_alias(table_alias),
-//         enclose_field_name(enclose_field_name),
-//         aggregate_fn(aggregate_fn),
-//         field_alias(field_alias) {}
-
-//   std::string BuildField() const {
-//     std::ostringstream oss;
-//     if (aggregate_fn != SqlAggregateFunction::None) {
-//       oss << AggregateFunctionToString(aggregate_fn) << "(";
-//     }
-//     if (table_alias.has_value()) {
-//       oss << table_alias.value() << ".";
-//     }
-//     oss << field;
-//     if (aggregate_fn != SqlAggregateFunction::None) {
-//       oss << ")";
-//     }
-//     if (field_alias.has_value()) {
-//       oss << " AS " << field_alias.value();
-//     }
-//     return oss.str();
-//   }
-
-//   std::string AggregateFunctionToString(SqlAggregateFunction fn) const {
-//     switch (fn) {
-//       case SqlAggregateFunction::Count:
-//         return "COUNT";
-//       case SqlAggregateFunction::Avg:
-//         return "AVG";
-//       case SqlAggregateFunction::Sum:
-//         return "SUM";
-//       case SqlAggregateFunction::ToUpper:
-//         return "TO_UPPER";
-//       case SqlAggregateFunction::ToLower:
-//         return "TO_LOWER";
-//       default:
-//         return "";
-//     }
-//   }
-// };
 
 template <typename TParameterType = DefaultPostgresParamType>
 struct FieldDef {
@@ -718,9 +675,9 @@ class NvSelect final {
   uint32_t current_param_index_;
   uint32_t level_;
   std::vector<JoinStatement<TParameterType>> join_blocks_;
-  FromTableStatement<TParameterType> from_table_;
+  std::shared_ptr<FromTableStatement<TParameterType>> from_table_;
   std::vector<FieldDef<TParameterType>> fields_;
-  std::vector<TParameterType> parameter_values_;
+  std::shared_ptr<std::vector<TParameterType>> parameter_values_;
   FromTableStatement<TParameterType>* subquery_from_parent_;
   std::string table_alias_;
   std::shared_ptr<WhereStatement<TParameterType>> where_;
@@ -733,9 +690,10 @@ class NvSelect final {
                   : current_param_index_(1),
                     level_(0),
                     join_blocks_(),
-                    from_table_(*this, level_),
+                    from_table_(nullptr),
                     fields_(),
-                    parameter_values_(),
+                    parameter_values_(
+                        std::make_shared<std::vector<TParameterType>>()),
                     subquery_from_parent_(nullptr),
                     table_alias_(),
                     where_(nullptr),
@@ -749,9 +707,10 @@ class NvSelect final {
                   : current_param_index_(current_param_index),
                     level_(0),
                     join_blocks_(),
-                    from_table_(*this, level_),
+                    from_table_(nullptr),
                     fields_(),
-                    parameter_values_(),
+                    parameter_values_(
+                        std::make_shared<std::vector<TParameterType>>()),
                     subquery_from_parent_(nullptr),
                     table_alias_(),
                     where_(nullptr),
@@ -761,13 +720,14 @@ class NvSelect final {
   /// @brief DO NOT USE THIS DIRECTLY, SUBQUERY USE THIS CONST
   /// @param current_param_index
   /// @param level
-  explicit NvSelect(uint32_t current_param_index, uint32_t level)
+  explicit NvSelect(std::shared_ptr<std::vector<TParameterType>> values,
+                    uint32_t current_param_index, uint32_t level)
                   : current_param_index_(current_param_index),
                     level_(level),
                     join_blocks_(),
-                    from_table_(*this, level),
+                    from_table_(nullptr),
                     fields_(),
-                    parameter_values_(),
+                    parameter_values_(values),
                     subquery_from_parent_(nullptr),
                     table_alias_(),
                     where_(nullptr),
@@ -780,15 +740,16 @@ class NvSelect final {
   /// @param level
   /// @param from_obj
   /// @param table_alias
-  explicit NvSelect(uint32_t current_param_index, uint32_t level,
+  explicit NvSelect(std::shared_ptr<std::vector<TParameterType>> values,
+                    uint32_t current_param_index, uint32_t level,
                     FromTableStatement<TParameterType>* from_obj,
                     const std::string& table_alias)
                   : current_param_index_(current_param_index),
                     level_(level),
                     join_blocks_(),
-                    from_table_(*this, level),
+                    from_table_(nullptr),
                     fields_(),
-                    parameter_values_(),
+                    parameter_values_(values),
                     subquery_from_parent_(from_obj),
                     table_alias_(std::string(table_alias)),
                     where_(nullptr),
@@ -801,7 +762,7 @@ class NvSelect final {
     return current_param_index_;
   }
 
-  void SetCurrentParamIndex(uint32_t current_param_index) {
+  void UpdateCurrentParamIndex(uint32_t current_param_index) {
     current_param_index_ = current_param_index;
   }
 
@@ -885,6 +846,11 @@ class NvSelect final {
     if (!subquery_from_parent_)
       throw std::runtime_error("Call this only from .From().EndFromSubquery()");
 
+    // std::cout << "Subquery End:" << current_param_index_ << std::endl;
+    // if (subquery_from_parent_->GetCurrentParameterIndex() !=
+    //     current_param_index_) {
+      subquery_from_parent_->UpdateCurrentParamIndex(current_param_index_);
+    // }
     return *subquery_from_parent_;
 
     // return from_table_;
@@ -894,7 +860,27 @@ class NvSelect final {
   /// @return
   FromTableStatement<TParameterType>& From() {
     try {
-      return from_table_;
+      if (!from_table_) {
+        // explicit
+        // FromTableStatement(std::shared_ptr<std::vector<TParameterType>>
+        // values, NvSelect<TParameterType>* parent,
+        //                       uint32_t parameter_index, uint32_t level)
+        //           : parent_(parent),
+        //             tables_(),
+        //             parameter_values_(values),
+        //             subqueries_(),
+        //             level_(uint32_t(level)),
+        //             current_parameter_index_(parameter_index) {}
+
+        from_table_ = std::make_shared<FromTableStatement<TParameterType>>(
+            parameter_values_, this, current_param_index_, level_);
+      }
+
+      // if (from_table_->GetCurrentParameterIndex() != current_param_index_) {
+      //   from_table_->UpdateCurrentParamIndex(current_param_index_);
+      // }
+
+      return *from_table_;
     } catch (const std::exception& e) {
       std::cerr << e.what() << '\n';
       throw e;
@@ -905,31 +891,39 @@ class NvSelect final {
   /// @return
   WhereStatement<TParameterType>& Where() {
     // TARGET CONST
-    // / explicit WhereStatement(NvSelect<TParamaterType>* parent,
+    // explicit WhereStatement(std::shared_ptr<std::vector<TParamaterType>>,
+    // parameter_values, NvSelect<TParamaterType>* parent,
     //                       uint32_t current_param_index, uint32_t level)
-    //   : parent_(parent),
-    //     values_(std::make_shared<std::vector<TParamaterType>>()),
-    //     clause_(std::make_shared<RecordClause<TParamaterType>>(
-    //         *this, current_param_index, values_)),
-    //     level_(level) {}
+    //               : parent_(parent),
+    //                 values_(parameter_values),
+    //                 conditions_(),
+    //                 level_(level),
+    //                 current_param_index_(current_param_index) {}
 
-    if (!where_)
+    if (!where_){
       where_ = std::make_shared<WhereStatement<TParameterType>>(
-          this, current_param_index_, level_);
+          parameter_values_, this, current_param_index_, level_);
+      // std::cout << "Where INIT:" << current_param_index_ <<std::endl;
+    }
+
+    if (where_->GetCurrentParameterIndex() != current_param_index_) {
+      where_->UpdateCurrentParameterIndex(current_param_index_);
+    }
+
     return *where_;
   }
 
-  /// @brief End of SELECT Statement
-  /// @return
-  NvSelect& EndBlock() {
-    return *this;
-  }
+  // /// @brief End of SELECT Statement
+  // /// @return
+  // NvSelect& EndBlock() {
+  //   return *this;
+  // }
 
   /// @brief Construct Join Statement Block
   /// @return
   JoinStatement<TParameterType>& Join() {
     try {
-      join_blocks_.emplace_back(*this, level_);
+      join_blocks_.emplace_back(*this, current_param_index_, level_);
       return join_blocks_.back();
     } catch (const std::exception& e) {
       std::cout << "Create JOINBLOCK_FAILED [" << level_ << "]: " << e.what()
@@ -1020,10 +1014,10 @@ class NvSelect final {
     }
 
     // FROM
-    if (!from_table_.Empty()) {
+    if (from_table_ != nullptr && !from_table_->Empty()) {
       query << (pretty_print ? "\n" + GenerateIndentation(level_) + "FROM \n"
                              : " FROM ")
-            << from_table_.GenerateQuery(pretty_print);
+            << from_table_->GenerateQuery(pretty_print);
     }
 
     // JOIN
@@ -1068,7 +1062,7 @@ class NvSelect final {
   /// @brief Get parameter values, all values has been packed with order based
   /// on the parameter index
   /// @return
-  std::vector<TParameterType> Values() const {
+  std::shared_ptr<std::vector<TParameterType>> Values() const {
     return parameter_values_;
   }
 
@@ -1104,12 +1098,7 @@ template <typename TParameterType>
 NvSelect<TParameterType>& FromTableStatement<TParameterType>::BeginSubquery(
     const std::string& table_alias) {
   uint32_t index;
-  if (subqueries_.empty()) {
-    index = __GetCurrentParameterIndexFromParent(parent_);
-  } else {
-    auto last = &subqueries_.back();
-    index = __GetCurrentParameterIndexFromParent(*last);
-  }
+  index = current_parameter_index_;
 
   __CreateNewSelectBlock(subqueries_, index, level_ + 1, table_alias);
   return subqueries_.back();
@@ -1119,7 +1108,7 @@ template <typename TParameterType>
 void FromTableStatement<TParameterType>::__CreateNewSelectBlock(
     std::vector<NvSelect<TParameterType>>& selects, uint32_t index,
     uint32_t level, const std::string& table_alias) {
-  selects.emplace_back(index, level, this, table_alias);
+  selects.emplace_back(parameter_values_, index, level, this, table_alias);
 }
 
 template <typename TParameterType>

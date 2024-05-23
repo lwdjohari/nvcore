@@ -128,30 +128,72 @@ class Condition {
   }
 };
 
-template <typename TParamaterType = DefaultPostgresParamType>
-class RecordClause {
+template <typename TParameterType>
+class WhereStatement {
  private:
-  WhereStatement<TParamaterType>& parent_;
+  NvSelect<TParameterType>* parent_;
+  std::shared_ptr<std::vector<TParameterType>> values_;
   std::vector<Condition> conditions_;
-  //   std::vector<DefaultPostgresParamType> parameters_;
-  uint32_t current_param_index_;
-  bool is_first_condition_ = true;
-  std::shared_ptr<std::vector<TParamaterType>> values_;
   uint32_t level_;
+  uint32_t current_param_index_;
+
+  
 
  public:
-  explicit RecordClause(
-      WhereStatement<TParamaterType>& parent, uint32_t start_param_index,
-      std::shared_ptr<std::vector<TParamaterType>> parameter_values,
-      uint32_t level)
+  
+
+  WhereStatement()
+                  : parent_(nullptr),
+                    values_(std::make_shared<std::vector<TParameterType>>()),
+                    conditions_(),
+                    level_(),
+                    current_param_index_(1) {}
+
+  explicit WhereStatement(std::shared_ptr<std::vector<TParameterType>> parameter_values, NvSelect<TParameterType>* parent,
+                          uint32_t current_param_index, uint32_t level)
                   : parent_(parent),
-                    current_param_index_(start_param_index),
                     values_(parameter_values),
-                    level_(level) {}
+                    conditions_(),
+                    level_(level),
+                    current_param_index_(current_param_index) {}
+  ~WhereStatement() {}
+
+  void UpdateCurrentParameterIndex(uint32_t parameter_index){
+    current_param_index_ = parameter_index;
+  }
+
+  int32_t GetCurrentParameterIndex() const{
+    return current_param_index_;
+  }
+
+  std::shared_ptr<std::vector<TParameterType>> Values() {
+    return values_;
+  }
+
+  NvSelect<TParameterType>& EndWhereBlock() {
+    //std::cout << "EndWhere ParamIndex: " << current_param_index_ << std::endl;
+    parent_->UpdateCurrentParamIndex(current_param_index_);
+    return *parent_;
+  }
+
+  std::string GenerateQuery(bool pretty_print = false,
+                            bool append_where_keyword = true) const {
+    std::ostringstream where_clause;
+    if (append_where_keyword) {
+      where_clause << "WHERE ";
+    }
+
+    for (auto& c : conditions_) {
+      where_clause << c.GenerateQuery();
+    }
+
+    return where_clause.str();
+  }
 
   template <typename T>
-  RecordClause<TParamaterType>& AddCondition(const std::string& field_name,
-                                             SqlOperator op, const T& values) {
+  WhereStatement<TParameterType>& AddCondition(const std::string& field_name,
+                                               SqlOperator op,
+                                               const T& values) {
     conditions_.emplace_back(field_name, op, 1, current_param_index_, level_);
     const auto cond = conditions_.back();
     current_param_index_ = cond.NextParameterIndex();
@@ -160,7 +202,7 @@ class RecordClause {
   }
 
   template <typename T>
-  RecordClause<TParamaterType>& AddConditionBetween(
+  WhereStatement<TParameterType>& AddConditionBetween(
       const std::string& field_name, const T& value1, const T& value2) {
     values_->push_back(value1);
     values_->push_back(value2);
@@ -172,8 +214,8 @@ class RecordClause {
   }
 
   template <typename T>
-  RecordClause<TParamaterType>& AddConditionIn(const std::string& field_name,
-                                               const std::vector<T>& values) {
+  WhereStatement<TParameterType>& AddConditionIn(const std::string& field_name,
+                                                 const std::vector<T>& values) {
     conditions_.emplace_back(field_name, SqlOperator::kIn, values.size(),
                              current_param_index_, level_);
     const auto cond = conditions_.back();
@@ -185,170 +227,28 @@ class RecordClause {
     return *this;
   }
 
-  RecordClause<TParamaterType>& And() {
+  WhereStatement<TParameterType>& And() {
     conditions_.emplace_back(LogicOperator::kAnd,
                              ConditionMode::LogicalOperator, level_);
     return *this;
   }
 
-  RecordClause<TParamaterType>& Or() {
+  WhereStatement<TParameterType>& Or() {
     conditions_.emplace_back(LogicOperator::kOr, ConditionMode::LogicalOperator,
                              level_);
     return *this;
   }
 
-  RecordClause<TParamaterType>& StartGroup() {
+  WhereStatement<TParameterType>& StartGroup() {
     conditions_.emplace_back(LogicOperator::kOr, ConditionMode::StartGroup,
                              level_);
     return *this;
   }
 
-  RecordClause<TParamaterType>& EndGroup() {
+  WhereStatement<TParameterType>& EndGroup() {
     conditions_.emplace_back(LogicOperator::kOr, ConditionMode::EndGroup,
                              level_);
     return *this;
-  }
-
-  std::string GenerateQuery(bool pretty_print = false) const {
-    std::ostringstream query;
-    for (auto& c : conditions_) {
-      query << c.GenerateQuery();
-    }
-
-    return query.str();
-  }
-
-  WhereStatement<TParamaterType>& EndClauseBlock() {
-    // should set the parent reflecting the current parameter index and
-    // propagating until root
-    // no recursive all pointing by reference values
-    return parent_;
-  }
-
-  //   const std::vector<DefaultPostgresParamType>& GetParameters() const {
-  //   return parameters_;
-  //   }
-
-  uint32_t GetCurrentParamIndex() const {
-    return current_param_index_;
-  }
-};
-
-template <typename TParamaterType>
-class WhereStatement {
- private:
-  NvSelect<TParamaterType>* parent_;
-  std::shared_ptr<std::vector<TParamaterType>> values_;
-  std::shared_ptr<RecordClause<TParamaterType>> clause_;
-  uint32_t level_;
-
-  template <typename T>
-  static void AppendValue(std::ostringstream& oss, const T& value) {
-    if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
-      std::time_t time = std::chrono::system_clock::to_time_t(value);
-      oss << std::put_time(std::localtime(&time), "%F %T");
-    } else if constexpr (std::is_same_v<T, std::vector<int>> ||
-                         std::is_same_v<T, std::vector<long long>> ||
-                         std::is_same_v<T, std::vector<float>> ||
-                         std::is_same_v<T, std::vector<double>> ||
-                         std::is_same_v<T, std::vector<std::string>> ||
-                         std::is_same_v<T, std::vector<bool>> ||
-                         std::is_same_v<
-                             T, std::vector<
-                                    std::chrono::system_clock::time_point>>) {
-      AppendVector(oss, value);
-    } else {
-      oss << value;
-    }
-  }
-
-  template <typename T>
-  static void AppendVectorValue(std::ostringstream& oss, const T& value) {
-    if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
-      std::time_t time = std::chrono::system_clock::to_time_t(value);
-      oss << std::put_time(std::localtime(&time), "%F %T");
-    } else {
-      oss << value;
-    }
-  }
-
-  template <typename T>
-  static void AppendVector(std::ostringstream& oss, const std::vector<T>& vec) {
-    oss << "[";
-    for (size_t i = 0; i < vec.size(); ++i) {
-      AppendVectorValue(oss, vec[i]);
-      if (i < vec.size() - 1)
-        oss << ", ";
-    }
-    oss << "]";
-  }
-
-  static void AppendVector(std::ostringstream& oss,
-                           const std::vector<bool>& vec) {
-    oss << "[";
-    for (size_t i = 0; i < vec.size(); ++i) {
-      oss << (vec[i] ? "true" : "false");
-      if (i < vec.size() - 1)
-        oss << ", ";
-    }
-    oss << "]";
-  }
-
- public:
-  // WhereStatement<TParamaterType>& parent, uint32_t start_param_index,
-  //     std::shared_ptr<std::vector<TParamaterType>> parameter_values,
-  //     uint32_t level)
-  //     : parent_(parent),
-  //       current_param_index_(start_param_index),
-  //       values_(parameter_values),
-  //       level_(level) {}
-
-  WhereStatement()
-                  : parent_(nullptr),
-                    values_(std::make_shared<std::vector<TParamaterType>>()),
-                    clause_(std::make_shared<RecordClause<TParamaterType>>(
-                        *this, 1, values_, 0)),
-                    level_() {}
-
-  explicit WhereStatement(NvSelect<TParamaterType>* parent,
-                          uint32_t current_param_index, uint32_t level)
-                  : parent_(parent),
-                    values_(std::make_shared<std::vector<TParamaterType>>()),
-                    clause_(std::make_shared<RecordClause<TParamaterType>>(
-                        *this, current_param_index, values_, level_)),
-                    level_(level) {}
-  ~WhereStatement() {}
-
-  std::shared_ptr<std::vector<TParamaterType>> Values() {
-    return values_;
-  }
-
-  RecordClause<TParamaterType>& BeginClause() {
-    return *clause_;
-  };
-
-  NvSelect<TParamaterType>& EndWhereBlock() {
-    return *parent_;
-  }
-
-  std::string GenerateQuery(bool pretty_print = false,
-                            bool append_where_keyword = true) const {
-    std::ostringstream where_clause;
-    if (append_where_keyword) {
-      where_clause << "WHERE ";
-    }
-
-    where_clause << clause_->GenerateQuery(pretty_print);
-    return where_clause.str();
-  }
-
-  std::string GetAllParameterValuesAsString() const {
-    std::ostringstream oss;
-    for (const auto& value : *values_) {
-      std::visit([&oss](const auto& val) { AppendValue(oss, val); }, value);
-      oss << std::endl;
-    }
-    return oss.str();
   }
 
   //   std::vector<DefaultPostgresParamType> GetAllParameters() const {

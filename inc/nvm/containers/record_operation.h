@@ -33,7 +33,7 @@
 #include "nvm/containers/record_def.h"
 namespace nvm::containers {
 
-template <typename TParamaterType = DefaultPostgresParamType>
+template <typename TParameterType = DefaultPostgresParamType>
 class RecordInsert {
  private:
   std::string table_name_;
@@ -41,20 +41,20 @@ class RecordInsert {
   std::ostringstream sstr_;
   std::ostringstream returning_clause_;
   uint32_t current_param_index_;
-  std::shared_ptr<std::vector<TParamaterType>> values_;
+  std::shared_ptr<std::vector<TParameterType>> values_;
   std::set<std::string> column_names_;
 
  public:
   explicit RecordInsert(
       const std::string& table_name, uint32_t start_param_index = 1,
-      std::shared_ptr<std::vector<TParamaterType>> parameter_values =
-          std::make_shared<std::vector<TParamaterType>>())
+      std::shared_ptr<std::vector<TParameterType>> parameter_values =
+          std::make_shared<std::vector<TParameterType>>())
                   : table_name_(table_name),
                     current_param_index_(start_param_index),
                     values_(parameter_values) {}
 
   template <typename T>
-  RecordInsert<TParamaterType>& AddValue(const std::string& column_name,
+  RecordInsert<TParameterType>& AddValue(const std::string& column_name,
                                          const T& value) {
     if (!columns_.str().empty()) {
       columns_ << ", ";
@@ -67,7 +67,7 @@ class RecordInsert {
     return *this;
   }
 
-  RecordInsert<TParamaterType>& AddReturning(const std::string& column_name) {
+  RecordInsert<TParameterType>& AddReturning(const std::string& column_name) {
     if (!returning_clause_.str().empty()) {
       returning_clause_ << ", ";
     }
@@ -85,7 +85,7 @@ class RecordInsert {
     return ss.str();
   }
 
-  std::shared_ptr<std::vector<TParamaterType>> Values() const {
+  std::shared_ptr<std::vector<TParameterType>> Values() const {
     return values_;
   }
 
@@ -94,7 +94,7 @@ class RecordInsert {
   }
 };
 
-template <typename TParamaterType = DefaultPostgresParamType>
+template <typename TParameterType = DefaultPostgresParamType>
 class RecordUpdate {
  private:
   std::string table_name_;
@@ -102,20 +102,20 @@ class RecordUpdate {
   std::ostringstream where_clause_;
   std::ostringstream returning_clause_;
   uint32_t current_param_index_;
-  std::shared_ptr<std::vector<TParamaterType>> values_;
+  std::shared_ptr<std::vector<TParameterType>> values_;
   std::set<std::string> column_names_;
 
  public:
   explicit RecordUpdate(
       const std::string& table_name, uint32_t start_param_index = 1,
-      std::shared_ptr<std::vector<TParamaterType>> parameter_values =
-          std::make_shared<std::vector<TParamaterType>>())
+      std::shared_ptr<std::vector<TParameterType>> parameter_values =
+          std::make_shared<std::vector<TParameterType>>())
                   : table_name_(table_name),
                     current_param_index_(start_param_index),
                     values_(parameter_values) {}
 
   template <typename T>
-  RecordUpdate<TParamaterType>& SetValue(const std::string& column_name,
+  RecordUpdate<TParameterType>& SetValue(const std::string& column_name,
                                          const T& value) {
     if (!set_clause_.str().empty()) {
       set_clause_ << ", ";
@@ -127,7 +127,7 @@ class RecordUpdate {
   }
 
   template <typename T>
-  RecordUpdate<TParamaterType>& AddCondition(const std::string& field_name,
+  RecordUpdate<TParameterType>& AddCondition(const std::string& field_name,
                                              SqlOperator op, const T& value) {
     if (!where_clause_.str().empty()) {
       where_clause_ << " AND ";
@@ -139,7 +139,7 @@ class RecordUpdate {
     return *this;
   }
 
-  RecordUpdate<TParamaterType>& AddReturning(const std::string& column_name) {
+  RecordUpdate<TParameterType>& AddReturning(const std::string& column_name) {
     if (!returning_clause_.str().empty()) {
       returning_clause_ << ", ";
     }
@@ -163,7 +163,7 @@ class RecordUpdate {
     return ss.str();
   }
 
-  std::shared_ptr<std::vector<TParamaterType>> Values() const {
+  std::shared_ptr<std::vector<TParameterType>> Values() const {
     return values_;
   }
 
@@ -172,27 +172,27 @@ class RecordUpdate {
   }
 };
 
-template <typename TParamaterType = DefaultPostgresParamType>
+template <typename TParameterType = DefaultPostgresParamType>
 class RecordDelete {
  private:
   std::string table_name_;
   std::ostringstream where_clause_;
   std::ostringstream returning_clause_;
   uint32_t current_param_index_;
-  std::shared_ptr<std::vector<TParamaterType>> values_;
+  std::shared_ptr<std::vector<TParameterType>> values_;
   std::set<std::string> column_names_;
 
  public:
   explicit RecordDelete(
       const std::string& table_name, uint32_t start_param_index = 1,
-      std::shared_ptr<std::vector<TParamaterType>> parameter_values =
-          std::make_shared<std::vector<TParamaterType>>())
+      std::shared_ptr<std::vector<TParameterType>> parameter_values =
+          std::make_shared<std::vector<TParameterType>>())
                   : table_name_(table_name),
                     current_param_index_(start_param_index),
                     values_(parameter_values) {}
 
   template <typename T>
-  RecordDelete<TParamaterType>& AddCondition(const std::string& field_name,
+  RecordDelete<TParameterType>& AddCondition(const std::string& field_name,
                                              SqlOperator op, const T& value) {
     if (!where_clause_.str().empty()) {
       where_clause_ << " AND ";
@@ -206,7 +206,7 @@ class RecordDelete {
     return *this;
   }
 
-  RecordDelete<TParamaterType>& AddReturning(const std::string& column_name) {
+  RecordDelete<TParameterType>& AddReturning(const std::string& column_name) {
     if (!returning_clause_.str().empty()) {
       returning_clause_ << ", ";
     }
@@ -230,7 +230,7 @@ class RecordDelete {
     return ss.str();
   }
 
-  std::shared_ptr<std::vector<TParamaterType>> Values() const {
+  std::shared_ptr<std::vector<TParameterType>> Values() const {
     return values_;
   }
 
