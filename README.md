@@ -23,11 +23,11 @@ Designed with header only lib and
 deps only to utf8-cpp and Howard Hinnant date static import
 for handling Utf8String and DateTime with timezone.
 
-NvCore mission is only focusing for faster development, eliminates silly mistakes and higher productivity 
+NvCore mission is focusing for faster development, eliminates silly mistakes and higher productivity 
 in area of generic SQL Builder, SQL Criteria Builder, SQL Sorting, 
 Contexable Fluent Validator, Binary packer & unpacker, easy to use DateTime with Timezone. 
 
-The vision: 
+Visions:
 Better productivity & better time for developers to enjoying their 
 coffee/tea/soft-drink/energy-drink or all at once.
 
@@ -36,9 +36,9 @@ coffee/tea/soft-drink/energy-drink or all at once.
 > please find v0.2.x on branch v0.2.1-dev  
 
 ## NvSQL: Fluent SQL Builder [[Top]](#nvcore)
-NvSQL is an SQL Builder for fluent sql query and parameters builder in SELECT, INSERT, UPDATE and DELETE.<br/>
+NvSQL is a SQL Builder for fluent sql query and parameters builder in SELECT, INSERT, UPDATE and DELETE.<br/>
 NvSQL is a DB Driver-Agnostic fluent sql builder which is mean no coupled to certain database driver implementations.<br/>
-The library have ParameterParser template specialization approach to convert std::vector<DbSupportedParameterType><br/> 
+The library have ParameterParser template specialization approach to convert std::vector&lt;DbSupportedParameterType&gt;<br/> 
 to other parameter values datatype that has specific implementations.<br/>
 
 ### NvSQL Builder Components
@@ -49,7 +49,7 @@ to other parameter values datatype that has specific implementations.<br/>
    
 Notes: <br/>
 Currenty only supported PostgreSQL dialect. <br/>
-WIP supported other database dialects.<br/>
+WIP to supported other database dialects.<br/>
 
 Complete examples located on ```tests/``` folder.
 
@@ -152,10 +152,10 @@ std::string service_code("RS");
 ```
 
 ## NvValidator [[Top]](#nvcore)
-NvValidator is template base fluent validator that can be chaining in contexable manner and<br/>
+NvValidator is a template base fluent validator that can be chaining in contexable manner and<br/>
 has reusable common general case validators.<br/>
 For flexibility, NvValidator is also supported custom lambda validation and <br/>
-class that implemented custom logic overloading operators.
+class that are implemented custom logic overloading operators.
 
 ### Example #1 [[Top]](#nvcore)
 General example
@@ -231,7 +231,7 @@ int main(){
 ```
 
 ### Example #2 [[Top]](#nvcore)
-Object that has logical operator overloading
+Object that is implemented logical operator overloading
 
 In this case we are using nvm::dates::DateTime which implemented logical operator overloading.
 ```cxx
@@ -258,12 +258,12 @@ if (!result.is_valid) {
 
 ### Example #3 [[Top]](#nvcore)
 Fluent validator will be less usable if it has rigid design, <br/>
-to support complex validations scenario that we are faces day-to day <br/>
+to support complex validations scenario that we are faces day-to-day <br/>
 NvValidator have feature of Custom Lambda Validator.
 
 Lambda function signature
 ```cxx
-[](const T&) noexcept {
+[](const T& value) noexcept {
   bool state;
   // your custom implementation
   return state;
@@ -315,7 +315,7 @@ if (!result.is_valid) {
 ## Nv DateTime [[Top]](#nvcore)
 Nv DateTime is an abstraction of Howard Hinnant Date library.<br/>
 We are facing the same painstakingly handling datetime in C++ especially in DateTime with Timezone.<br/>
-Nv DateTime is build to supported DateTime with IANA Timezone handling.
+Nv DateTime is build to supported DateTime with IANA Timezone handling and easy datepart handling or easy date-manipulations.
 
 Timezone DB for this abstraction currently is set to use the host timezone DB.<br/>
 For complete example, please see ```tests/nvm/datetime_test.cc```.
@@ -414,8 +414,8 @@ Requirement:
 Build:
 
 1. Clone main repository and clone the submodules
-```shell
-git clone --recurse-submodules .git
+```sh
+git clone --recurse-submodules https://github.com/lwdjohari/nvm-core.git
 ```
 
 2. Open in your favorite IDE
