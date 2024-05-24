@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include "catch2/catch_all.hpp"
-#include "nvm/containers/nv_validator.h"
+#include "nvm/nv_validator.h"
 
 using namespace nvm;
 
@@ -23,10 +23,10 @@ class CustomObject {
 };
 
 TEST_CASE("validation-test", "[validator][normal-case]") {
-  // using Validator = nvm::containers::validations::Validator;
-  using NvValidator = nvm::containers::validations::NvValidator;
-  using ValidationOperator = nvm::containers::validations::ValidationOperator;
-  using ValidationResult = nvm::containers::validations::ValidationResult;
+  
+  using NvValidator = nvm::validators::NvValidator;
+  using ValidationOperator = nvm::validators::ValidationOperator;
+  using ValidationResult = nvm::validators::ValidationResult;
 
   NvValidator validator;
 
@@ -71,10 +71,10 @@ TEST_CASE("validation-test", "[validator][normal-case]") {
 }
 
 TEST_CASE("validation-test-failed", "[validator][normal-case]") {
-  // using Validator = nvm::containers::validations::Validator;
-  using NvValidator = nvm::containers::validations::NvValidator;
-  using ValidationOperator = nvm::containers::validations::ValidationOperator;
-  using ValidationResult = nvm::containers::validations::ValidationResult;
+  // using Validator = nvm::validators::Validator;
+  using NvValidator = nvm::validators::NvValidator;
+  using ValidationOperator = nvm::validators::ValidationOperator;
+  using ValidationResult = nvm::validators::ValidationResult;
 
   NvValidator validator;
 
@@ -119,10 +119,10 @@ TEST_CASE("validation-test-failed", "[validator][normal-case]") {
 }
 
 TEST_CASE("validation-email", "[validator][normal-case]") {
-  // using Validator = nvm::containers::validations::Validator;
-  using NvValidator = nvm::containers::validations::NvValidator;
-  using ValidationOperator = nvm::containers::validations::ValidationOperator;
-  using ValidationResult = nvm::containers::validations::ValidationResult;
+  // using Validator = nvm::validators::Validator;
+  using NvValidator = nvm::validators::NvValidator;
+  using ValidationOperator = nvm::validators::ValidationOperator;
+  using ValidationResult = nvm::validators::ValidationResult;
 
   NvValidator validator;
 
@@ -171,9 +171,9 @@ TEST_CASE("validation-email", "[validator][normal-case]") {
 }
 
 TEST_CASE("validation-email-failed", "[validator][normal-case]") {
-  using NvValidator = nvm::containers::validations::NvValidator;
-  using ValidationOperator = nvm::containers::validations::ValidationOperator;
-  using ValidationResult = nvm::containers::validations::ValidationResult;
+  using NvValidator = nvm::validators::NvValidator;
+  using ValidationOperator = nvm::validators::ValidationOperator;
+  using ValidationResult = nvm::validators::ValidationResult;
 
   NvValidator validator;
 
@@ -224,9 +224,9 @@ TEST_CASE("validation-email-failed", "[validator][normal-case]") {
 }
 
 TEST_CASE("validation-smart_ptr", "[validator][normal-case]") {
-  using NvValidator = nvm::containers::validations::NvValidator;
-  using ValidationOperator = nvm::containers::validations::ValidationOperator;
-  using ValidationResult = nvm::containers::validations::ValidationResult;
+  using NvValidator = nvm::validators::NvValidator;
+  using ValidationOperator = nvm::validators::ValidationOperator;
+  using ValidationResult = nvm::validators::ValidationResult;
 
   NvValidator validator;
 
@@ -278,9 +278,9 @@ TEST_CASE("validation-smart_ptr", "[validator][normal-case]") {
 }
 
 TEST_CASE("validation-numeric-string", "[validator][normal-case]") {
-  using NvValidator = nvm::containers::validations::NvValidator;
-  using ValidationOperator = nvm::containers::validations::ValidationOperator;
-  using ValidationResult = nvm::containers::validations::ValidationResult;
+  using NvValidator = nvm::validators::NvValidator;
+  using ValidationOperator = nvm::validators::ValidationOperator;
+  using ValidationResult = nvm::validators::ValidationResult;
 
   NvValidator validator;
 
@@ -326,9 +326,9 @@ TEST_CASE("validation-numeric-string", "[validator][normal-case]") {
 }
 
 TEST_CASE("validation-aphabet", "[validator][normal-case]") {
-  using NvValidator = nvm::containers::validations::NvValidator;
-  using ValidationOperator = nvm::containers::validations::ValidationOperator;
-  using ValidationResult = nvm::containers::validations::ValidationResult;
+  using NvValidator = nvm::validators::NvValidator;
+  using ValidationOperator = nvm::validators::ValidationOperator;
+  using ValidationResult = nvm::validators::ValidationResult;
 
   NvValidator validator;
 

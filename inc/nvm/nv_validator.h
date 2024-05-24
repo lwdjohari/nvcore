@@ -35,7 +35,7 @@
 #include "nvm/macro.h"
 #include "nvm/types/type_utility.h"
 
-namespace nvm::containers::validations {
+namespace nvm::validators {
 
 enum class ValidationOperator {
   kEqual,
@@ -574,4 +574,4 @@ class NvValidator {
   std::unordered_set<std::string> keys_;
 };
 
-}  // namespace nvm::containers::validations
+}  // namespace nvm::validators
