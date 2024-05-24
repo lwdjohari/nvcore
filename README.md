@@ -1,7 +1,14 @@
 # NvCore
-Fluent SQL builder, Fluent Validator, DateTime and utils library <br/>
-for C++17 to handling day-to-day C++17 development use cases.<br/>
+Fluent SQL builder, Fluent Validator, DateTime and utils library for C++17 to handling day-to-day C++17 development use cases.<br/>
 
+[NvSQL: Fluent SQL Builder](#nvsql-fluent-sql-builder)<br/>
+[NvValidator: Fluent validator](#nvvalidator)<br/>
+[Nv Datetime: Easy DateTime with Timezone](#datetime)<br/>
+[How To Build](#how-to-build)<br/>
+[Contributions](#contributions)<br/>
+[License](#license)<br/>
+
+## NvCore Library Components
 1. NvSQL: Fluent Generic SQL Builder, SQL Criteria Builder ( Select, Insert, Update, Delete with DB driver-agnostic design -- Currently only support postgres SQL dialect.
 2. NvValidator: Contexable Fluent Validator.
 3. Tuple and struct mapper.
@@ -9,7 +16,8 @@ for C++17 to handling day-to-day C++17 development use cases.<br/>
 5. Easy to use & intuitive DateTime with Timezone class.
 6. Types utility
 7. Flags macro to enable quick enum class to become flags enum.
-8. All the swiss army utils for higher productivity.
+8. Floating point Approximation and epsilon.
+9. All the swiss army utils for higher productivity.
 
 Designed with header only lib and 
 deps only to utf8-cpp and Howard Hinnant date static import
@@ -27,7 +35,7 @@ coffee/tea/soft-drink/energy-drink or all at once.
 > main branch : v0.3.x and upward is not backward compability with version v0.2.x.
 > please find v0.2.x on branch v0.2.1-dev  
 
-## NvSQL: Fluent SQL Builder
+## NvSQL: Fluent SQL Builder [[Top]](#nvcore)
 NvSQL is an SQL Builder for fluent sql query and parameters builder in SELECT, INSERT, UPDATE and DELETE.<br/>
 NvSQL is a DB Driver-Agnostic fluent sql builder which is mean no coupled to certain database driver implementations.<br/>
 The library have ParameterParser template specialization approach to convert std::vector<DbSupportedParameterType><br/> 
@@ -143,13 +151,13 @@ std::string service_code("RS");
 
 ```
 
-## NvValidator
+## NvValidator [[Top]](#nvcore)
 NvValidator is template base fluent validator that can be chaining in contexable manner and<br/>
 has reusable common general case validators.<br/>
 For flexibility, NvValidator is also supported custom lambda validation and <br/>
 class that implemented custom logic overloading operators.
 
-### Example #1
+### Example #1 [[Top]](#nvcore)
 General example
 ```cxx
 #include <iostream>
@@ -222,7 +230,7 @@ int main(){
 }
 ```
 
-### Example #2
+### Example #2 [[Top]](#nvcore)
 Object that has logical operator overloading
 
 In this case we are using nvm::dates::DateTime which implemented logical operator overloading.
@@ -248,7 +256,7 @@ if (!result.is_valid) {
 }
 ```
 
-### Example #3
+### Example #3 [[Top]](#nvcore)
 Fluent validator will be less usable if it has rigid design, <br/>
 to support complex validations scenario that we are faces day-to day <br/>
 NvValidator have feature of Custom Lambda Validator.
@@ -304,7 +312,7 @@ if (!result.is_valid) {
 ```
 
 
-## DateTime
+## Nv DateTime [[Top]](#nvcore)
 Nv DateTime is an abstraction of Howard Hinnant Date library.<br/>
 We are facing the same painstakingly handling datetime in C++ especially in DateTime with Timezone.<br/>
 Nv DateTime is build to supported DateTime with IANA Timezone handling.
@@ -317,7 +325,7 @@ For complete example, please see ```tests/nvm/datetime_test.cc```.
 #include "nvm/dates/datetime.h"
 ```
 
-### Local time Now() with the host Timezone
+### Local time Now() with the host Timezone [[Top]](#nvcore)
 ```cxx
 using DateTime = nvm::dates::DateTime;
 
@@ -326,7 +334,7 @@ std::cout << "Local time: " << current_local_time << std::endl;
 
 ```
 
-### UTC time UtcNow() with the UTC Timezone
+### UTC time UtcNow() with the UTC Timezone [[Top]](#nvcore)
 ```cxx
 using DateTime = nvm::dates::DateTime;
 
@@ -335,7 +343,7 @@ std::cout << "UTC time: " << utc_local_time << std::endl;
 
 ```
 
-### Specified the DateTime part and the IANA Timezone
+### Specified the DateTime part and the IANA Timezone [[Top]](#nvcore)
 ```cxx
 using DateTime = nvm::dates::DateTime;
 
@@ -344,7 +352,7 @@ std::cout << "New York Time: " << new_york_time << std::endl;
 
 ```
 
-### Example 1: Get Start of Month and End of Month from current date.
+### Example 1: Get Start of Month and End of Month from current date. [[Top]](#nvcore)
 ```cxx
 using DateTime = dates::DateTime;
 
@@ -359,7 +367,7 @@ std::cout << "LAST    : " << last_day_of_month << std::endl;
 
 ```
 
-### Example 2: Add or Subtract Duration from DateTime.
+### Example 2: Add or Subtract Duration from DateTime. [[Top]](#nvcore)
 ```cxx
 using namespace nvm::dates;
 
@@ -384,7 +392,7 @@ std::cout << "Diff in second: \n" << diff.count() << std::endl;
 
 ```
 
-### Example 3: Convert to other IANA Timezone
+### Example 3: Convert to other IANA Timezone [[Top]](#nvcore)
 ```cxx
 using DateTime = dates::DateTime;
 auto jkt_time = DateTime(2022, 7, 10, 13, 00, 00, 00, "Asia/Jakarta");
@@ -398,7 +406,7 @@ std::cout << "New York: " << res_new_york << std::endl;
 
 ```
 
-## How to build
+## How to build [[Top]](#nvcore)
 Requirement:
 1. CMake
 2. Clang or GCC C++17 Compiler (currently developed using clang)
@@ -407,14 +415,14 @@ Build:
 
 1. Clone main repository and clone the submodules
 ```shell
-git clone --recurse-submodules https://github.com/lwdjohari/nvm-core.git
+git clone --recurse-submodules .git
 ```
 
 2. Open in your favorite IDE
 3. Run CMake configure
 4. Build
 
-## Linking NvCore
+## Linking NvCore [[Top]](#nvcore)
 To linking NvCore as static library
 ```cmake
 # NvCore deps
@@ -428,12 +436,12 @@ target_link_libraries(${PROJECT_NAME}
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 ```
 
-## Contributions
+## Contributions [[Top]](#nvcore)
 
 Currently we are still on-going roadmap design and architectural design that might be lead to complete rewrite or complete breaking changes.
 We might accept contributors when everything above have better & crytal-clears roadmap.
 
-## License
+## License [[Top]](#nvcore)
 
 Copyright [2023] [Linggawasistha Djohari]
 
