@@ -65,8 +65,23 @@ if(LIB_NVM_CORE_USE_CATCH)
  find_package(Catch2 3 REQUIRED)
 endif()
 
+
 # Add dependencies source code
 
+# UTF8CPP
+file(GLOB_RECURSE SOURCES_UTF8CPP CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/utfcpp/source/*.h
+)
+
+add_library(utf8cpp ${SOURCES_UTF8CPP})
+set_target_properties(utf8cpp PROPERTIES LINKER_LANGUAGE CXX)
+target_compile_features(utf8cpp PUBLIC cxx_std_17)
+target_include_directories(utf8cpp
+    PUBLIC
+        deps/utfcpp/source/
+)
+
+# HH Date
 option( USE_SYSTEM_TZ_DB "Use the operating system's timezone database" OFF )
 option( MANUAL_TZ_DB "User will set TZ DB manually by invoking set_install in their code" OFF )
 option( USE_TZ_DB_IN_DOT "Save the timezone database in the current folder" OFF )

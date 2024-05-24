@@ -1,3 +1,6 @@
 [submodule "deps/hhdate"]
 	path = deps/hhdate
 	url = git@github.com:HowardHinnant/date.git
+[submodule "deps/utfcpp"]
+	path = deps/utfcpp
+	url = https://github.com/nemtrif/utfcpp.git
