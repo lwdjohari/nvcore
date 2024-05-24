@@ -1,3 +1,22 @@
+/*
+ *  Copyright (c) 2024 Linggawasistha Djohari
+ * <linggawasistha.djohari@outlook.com> Licensed to Linggawasistha Djohari under
+ * one or more contributor license agreements. See the NOTICE file distributed
+ * with this work for additional information regarding copyright ownership.
+ *
+ *  Linggawasistha Djohari licenses this file to you under the Apache License,
+ *  Version 2.0 (the "License"); you may not use this file except in
+ *  compliance with the License. You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 #pragma once
 
 #include <cstdint>
@@ -487,6 +506,19 @@ class FromTableStatement {
   uint32_t level_;
   uint32_t current_parameter_index_;
 
+  std::string __GetTableAliasFromParent(
+      const NvSelect<TParameterType>& select) const;
+
+  uint32_t __GetCurrentParameterIndexFromParent(
+      const NvSelect<TParameterType>& select) const;
+
+  void __CreateNewSelectBlock(std::vector<NvSelect<TParameterType>>& selects,
+                              uint32_t index, uint32_t level,
+                              const std::string& table_alias);
+
+  std::string __GenerateSelectQuery(const NvSelect<TParameterType>& selects,
+                                    bool pretty_print) const;
+
  public:
   explicit FromTableStatement(
       std::shared_ptr<std::vector<TParameterType>> values,
@@ -524,19 +556,9 @@ class FromTableStatement {
     return current_parameter_index_;
   }
 
-  void UpdateCurrentParamIndex(uint32_t param_index){
+  void UpdateCurrentParamIndex(uint32_t param_index) {
     current_parameter_index_ = param_index;
   }
-
-  uint32_t __GetCurrentParameterIndexFromParent(
-      const NvSelect<TParameterType>& select) const;
-
-  void __CreateNewSelectBlock(std::vector<NvSelect<TParameterType>>& selects,
-                              uint32_t index, uint32_t level,
-                              const std::string& table_alias);
-
-  std::string __GenerateSelectQuery(const NvSelect<TParameterType>& selects,
-                                    bool pretty_print) const;
 
   /// @brief Construct SUBQUERY inside FROM Statement block
   /// @param table_alias
@@ -581,9 +603,13 @@ class FromTableStatement {
 
     if (!subqueries_.empty()) {
       for (auto& s : subqueries_) {
+        auto alias = __GetTableAliasFromParent(s);
         if (!first_element)
-          query << (pretty_print ? ",\n" : ", ")
-                << __GenerateSelectQuery(s, pretty_print);
+          query << (pretty_print ? ",\n" : ", ");
+
+        query << (pretty_print ? GenerateIndentation(level_+1) + "(\n" : " (")
+              << __GenerateSelectQuery(s, pretty_print) << ")"
+              << (alias.empty() ? "" : " AS " + alias);
       }
     }
     return query.str();
@@ -683,6 +709,7 @@ class NvSelect final {
   std::shared_ptr<WhereStatement<TParameterType>> where_;
   std::shared_ptr<OrderByStatement<TParameterType>> order_by_;
   std::shared_ptr<GroupByStatement<TParameterType>> group_by_;
+  WhereStatement<TParameterType>* subquery_where_parent_;
 
  public:
   /// @brief Construct NvSelect with parameter index start from 1.
@@ -698,7 +725,8 @@ class NvSelect final {
                     table_alias_(),
                     where_(nullptr),
                     order_by_(nullptr),
-                    group_by_(nullptr) {}
+                    group_by_(nullptr),
+                    subquery_where_parent_(nullptr) {}
 
   /// @brief Construct NvSelect with parameter as specified.
   /// @param current_param_index start of parameter index, must be 1 based for
@@ -715,7 +743,8 @@ class NvSelect final {
                     table_alias_(),
                     where_(nullptr),
                     order_by_(nullptr),
-                    group_by_(nullptr) {}
+                    group_by_(nullptr),
+                    subquery_where_parent_(nullptr) {}
 
   /// @brief DO NOT USE THIS DIRECTLY, SUBQUERY USE THIS CONST
   /// @param current_param_index
@@ -732,7 +761,8 @@ class NvSelect final {
                     table_alias_(),
                     where_(nullptr),
                     order_by_(nullptr),
-                    group_by_(nullptr) {}
+                    group_by_(nullptr),
+                    subquery_where_parent_(nullptr) {}
 
   /// @brief DO NOT USE DIRECTLY, SUBQUERY FROM NESTED FROM STATEMENT USE THIS
   /// CONST
@@ -754,7 +784,31 @@ class NvSelect final {
                     table_alias_(std::string(table_alias)),
                     where_(nullptr),
                     order_by_(nullptr),
-                    group_by_(nullptr) {}
+                    group_by_(nullptr),
+                    subquery_where_parent_(nullptr) {}
+
+  /// @brief DO NOT USE DIRECTLY, SUBQUERY FROM NESTED WHERE STATEMENT USE THIS
+  /// CONST
+  /// @param current_param_index
+  /// @param level
+  /// @param from_obj
+  /// @param table_alias
+  explicit NvSelect(std::shared_ptr<std::vector<TParameterType>> values,
+                    WhereStatement<TParameterType>* where_obj,
+                    uint32_t current_param_index, uint32_t level,
+                    const std::string& table_alias)
+                  : current_param_index_(current_param_index),
+                    level_(level),
+                    join_blocks_(),
+                    from_table_(nullptr),
+                    fields_(),
+                    parameter_values_(values),
+                    subquery_from_parent_(nullptr),
+                    table_alias_(std::string(table_alias)),
+                    where_(nullptr),
+                    order_by_(nullptr),
+                    group_by_(nullptr),
+                    subquery_where_parent_(where_obj) {}
 
   ~NvSelect() {}
 
@@ -764,6 +818,10 @@ class NvSelect final {
 
   void UpdateCurrentParamIndex(uint32_t current_param_index) {
     current_param_index_ = current_param_index;
+  }
+
+  std::string TableAlias() const {
+    return table_alias_;
   }
 
   uint32_t GetBlockLevel() const {
@@ -844,16 +902,26 @@ class NvSelect final {
   /// @return
   FromTableStatement<TParameterType>& EndSubqueryInsideFrom() {
     if (!subquery_from_parent_)
-      throw std::runtime_error("Call this only from .From().EndFromSubquery()");
+      throw std::runtime_error(
+          "Call this only from .From().AddSubquery().EndFromSubquery()");
 
     // std::cout << "Subquery End:" << current_param_index_ << std::endl;
     // if (subquery_from_parent_->GetCurrentParameterIndex() !=
     //     current_param_index_) {
-      subquery_from_parent_->UpdateCurrentParamIndex(current_param_index_);
+    subquery_from_parent_->UpdateCurrentParamIndex(current_param_index_);
     // }
     return *subquery_from_parent_;
 
     // return from_table_;
+  }
+
+  WhereStatement<TParameterType>& EndSubqueryInsideWhereCondition() {
+    if (!subquery_where_parent_)
+      throw std::runtime_error(
+          "Call this only from .Where().AddSubquery().EndFromSubquery()");
+
+    subquery_where_parent_->UpdateCurrentParameterIndex(current_param_index_);
+    return *subquery_where_parent_;
   }
 
   /// @brief Construct SQL FROM Statement block
@@ -900,7 +968,7 @@ class NvSelect final {
     //                 level_(level),
     //                 current_param_index_(current_param_index) {}
 
-    if (!where_){
+    if (!where_) {
       where_ = std::make_shared<WhereStatement<TParameterType>>(
           parameter_values_, this, current_param_index_, level_);
       // std::cout << "Where INIT:" << current_param_index_ <<std::endl;
@@ -996,14 +1064,9 @@ class NvSelect final {
   std::string GenerateQuery(bool pretty_print = false) const {
     std::ostringstream query;
 
-    std::string opening_bracket = subquery_from_parent_ != nullptr ? "(" : "";
-    std::string closed_bracket = subquery_from_parent_ != nullptr ? ")" : "";
-    std::string table_alias =
-        subquery_from_parent_ != nullptr ? table_alias_ : "";
     // SELECT
-    query << (pretty_print
-                  ? GenerateIndentation(level_) + opening_bracket + "SELECT \n"
-                  : "SELECT ");
+    query << (pretty_print ? GenerateIndentation(level_) + "SELECT \n"
+                           : "SELECT ");
     bool first_element = true;
     for (const auto& field : fields_) {
       if (!first_element)
@@ -1030,7 +1093,7 @@ class NvSelect final {
 
     // WHERE
     if (where_ != nullptr) {
-      query << (pretty_print ? "\n" + GenerateIndentation(level_) + "WHERE \n"
+      query << (pretty_print ? "\n" + GenerateIndentation(level_) + "WHERE"
                              : " WHERE ");
       query << (pretty_print ? GenerateIndentation(level_ + 1) : "")
             << where_->GenerateQuery(pretty_print, false);
@@ -1043,7 +1106,9 @@ class NvSelect final {
       query << (pretty_print ? GenerateIndentation(level_ + 1) : "")
             << group_by_->GenerateQuery(pretty_print);
     }
+
     // HAVING BY
+
     // ORDER BY
     if (order_by_ != nullptr) {
       query << (pretty_print ? GenerateIndentation(level_) + "\nORDER BY \n"
@@ -1051,11 +1116,9 @@ class NvSelect final {
       query << (pretty_print ? GenerateIndentation(level_ + 1) : "")
             << order_by_->GenerateQuery(pretty_print);
     }
+
     // LIMIT
 
-    // RESULT
-    query << (pretty_print ? GenerateIndentation(level_) : "") << closed_bracket
-          << (table_alias.empty() ? "" : " AS " + table_alias);
     return query.str();
   }
 
@@ -1115,6 +1178,20 @@ template <typename TParameterType>
 std::string FromTableStatement<TParameterType>::__GenerateSelectQuery(
     const NvSelect<TParameterType>& select, bool pretty_print) const {
   return select.GenerateQuery(pretty_print);
+}
+
+template <typename TParameterType>
+std::string Condition<TParameterType>::__GenerateQueryFromSubquery(
+    bool pretty_print) const {
+  if (!subquery_)
+    return std::string();
+  return subquery_->GenerateQuery(pretty_print);
+}
+
+template <typename TParameterType>
+std::string FromTableStatement<TParameterType>::__GetTableAliasFromParent(
+    const NvSelect<TParameterType>& select) const {
+  return select.TableAlias();
 }
 
 }  // namespace nvm::containers
