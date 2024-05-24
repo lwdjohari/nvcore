@@ -27,9 +27,9 @@
 #include <optional>
 #include <unordered_map>
 
-#include "nvm/containers/record_def.h"
+#include "nvm/sqlbuilder/def.h"
 
-namespace nvm::containers {
+namespace nvm::sqlbuilder {
 struct OrderByClause {
   std::string field_name_;
   std::optional<std::string> table_alias;

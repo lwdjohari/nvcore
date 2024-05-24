@@ -29,9 +29,9 @@
 #include <variant>
 #include <vector>
 
-#include "nvm/containers/record_def.h"
+#include "nvm/sqlbuilder/def.h"
 
-namespace nvm::containers {
+namespace nvm::sqlbuilder {
 
 enum class ConditionMode {
   Comparator = 0,

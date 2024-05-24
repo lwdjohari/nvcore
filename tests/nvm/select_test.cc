@@ -3,19 +3,19 @@
 #include <iostream>
 
 #include "catch2/catch_all.hpp"
-#include "nvm/containers/nv_select.h"
+#include "nvm/sqlbuilder/nv_select_builder.h"
 #include "nvm/strings/utility.h"
 using namespace nvm;
 
 TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
-  // using Validator = nvm::containers::validations::Validator;
-  using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
-  using NvSelect = nvm::containers::NvSelect<DefaultPostgresParamType>;
-  using SqlOperator = nvm::containers::SqlOperator;
-  using RecordKey = nvm::containers::RecordKey;
-  using SqlAggregateFn = nvm::containers::SqlAggregateFunction;
+  // using Validator = nvm::sqlbuilder::validations::Validator;
+  using DefaultPostgresParamType = nvm::sqlbuilder::DefaultPostgresParamType;
+  using NvSelect = nvm::sqlbuilder::NvSelect<DefaultPostgresParamType>;
+  using SqlOperator = nvm::sqlbuilder::SqlOperator;
+  using RecordKey = nvm::sqlbuilder::RecordKey;
+  using SqlAggregateFn = nvm::sqlbuilder::SqlAggregateFunction;
   using ParameterParser =
-      nvm::containers::PostgresDefaultParameterParser<DefaultPostgresParamType>;
+      nvm::sqlbuilder::PostgresDefaultParameterParser<DefaultPostgresParamType>;
   auto select = std::make_unique<NvSelect>(1);
 
   // clang-format off
@@ -116,13 +116,13 @@ TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
 }
 
 TEST_CASE("select-test-complex-2", "[validator][normal-case]") {
-  using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
-  using NvSelect = nvm::containers::NvSelect<DefaultPostgresParamType>;
-  using SqlOperator = nvm::containers::SqlOperator;
-  using RecordKey = nvm::containers::RecordKey;
-  using SqlAggregateFn = nvm::containers::SqlAggregateFunction;
+  using DefaultPostgresParamType = nvm::sqlbuilder::DefaultPostgresParamType;
+  using NvSelect = nvm::sqlbuilder::NvSelect<DefaultPostgresParamType>;
+  using SqlOperator = nvm::sqlbuilder::SqlOperator;
+  using RecordKey = nvm::sqlbuilder::RecordKey;
+  using SqlAggregateFn = nvm::sqlbuilder::SqlAggregateFunction;
   using ParameterParser =
-      nvm::containers::PostgresDefaultParameterParser<DefaultPostgresParamType>;
+      nvm::sqlbuilder::PostgresDefaultParameterParser<DefaultPostgresParamType>;
 
   NvSelect s(1);
 
@@ -175,14 +175,14 @@ TEST_CASE("select-test-complex-2", "[validator][normal-case]") {
   std::cout << parser.GetAllParameterValuesAsString() << std::endl;
 }
 TEST_CASE("select-test-groupby-count", "[validator][normal-case]") {
-  // using Validator = nvm::containers::validations::Validator;
-  using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
-  using NvSelect = nvm::containers::NvSelect<DefaultPostgresParamType>;
-  using SqlOperator = nvm::containers::SqlOperator;
-  using RecordKey = nvm::containers::RecordKey;
-  using SqlAggregateFn = nvm::containers::SqlAggregateFunction;
+  // using Validator = nvm::sqlbuilder::validations::Validator;
+  using DefaultPostgresParamType = nvm::sqlbuilder::DefaultPostgresParamType;
+  using NvSelect = nvm::sqlbuilder::NvSelect<DefaultPostgresParamType>;
+  using SqlOperator = nvm::sqlbuilder::SqlOperator;
+  using RecordKey = nvm::sqlbuilder::RecordKey;
+  using SqlAggregateFn = nvm::sqlbuilder::SqlAggregateFunction;
   using ParameterParser =
-      nvm::containers::PostgresDefaultParameterParser<DefaultPostgresParamType>;
+      nvm::sqlbuilder::PostgresDefaultParameterParser<DefaultPostgresParamType>;
 
   NvSelect select;
   // clang-format off

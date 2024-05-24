@@ -27,9 +27,9 @@
 #include <optional>
 #include <unordered_map>
 
-#include "nvm/containers/record_def.h"
+#include "nvm/sqlbuilder/def.h"
 
-namespace nvm::containers {
+namespace nvm::sqlbuilder {
 
 enum class GroupByMode {
   Field = 1,
@@ -145,4 +145,4 @@ class GroupByStatement {
   uint32_t param_index_;
 };
 
-}  // namespace nvm::containers
+}  // namespace nvm::sqlbuilder

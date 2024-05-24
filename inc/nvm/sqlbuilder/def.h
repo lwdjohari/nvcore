@@ -34,7 +34,7 @@
 #include <variant>
 #include <vector>
 
-namespace nvm::containers {
+namespace nvm::sqlbuilder {
 
 using DefaultPostgresParamType =
     std::variant<int, long long, float, double, std::string, bool,
@@ -190,7 +190,7 @@ class ParameterParser {
  public:
   explicit ParameterParser(
       std::shared_ptr<std::vector<TParameterType>> parameter_values)
-      : parameter_values_(parameter_values) {}
+                  : parameter_values_(parameter_values) {}
 
   virtual ~ParameterParser() = default;
 
@@ -202,7 +202,8 @@ class ParameterParser {
   virtual std::string GetAllParameterValuesAsString() const {
     std::ostringstream oss;
     for (const auto& value : *parameter_values_) {
-      std::visit([this, &oss](const auto& val) { AppendValue(oss, val); }, value);
+      std::visit([this, &oss](const auto& val) { AppendValue(oss, val); },
+                 value);
       oss << std::endl;
     }
     return oss.str();
@@ -216,7 +217,8 @@ class ParameterParser {
  private:
   template <typename TParameterDestType>
   std::shared_ptr<std::vector<TParameterDestType>> ParseImpl() const {
-    return std::static_pointer_cast<std::vector<TParameterDestType>>(ParseImplInternal());
+    return std::static_pointer_cast<std::vector<TParameterDestType>>(
+        ParseImplInternal());
   }
 
   template <typename T>
@@ -253,7 +255,8 @@ class ParameterParser {
     oss << "]";
   }
 
-  void AppendVector(std::ostringstream& oss, const std::vector<bool>& vec) const {
+  void AppendVector(std::ostringstream& oss,
+                    const std::vector<bool>& vec) const {
     oss << "[";
     for (size_t i = 0; i < vec.size(); ++i) {
       oss << (vec[i] ? "true" : "false");
@@ -272,7 +275,6 @@ class ParameterParser {
   struct is_vector<std::vector<T>> : std::true_type {};
 };
 
-
 // Example of a derived class
 template <typename TParameterType = DefaultPostgresParamType>
 class PostgresDefaultParameterParser : public ParameterParser<TParameterType> {
@@ -283,11 +285,11 @@ class PostgresDefaultParameterParser : public ParameterParser<TParameterType> {
   std::shared_ptr<void> ParseImplInternal() const override {
     // Implement the actual parsing logic here
     // For simplicity, returning the same parameter values cast to void
-    return std::make_shared<std::vector<TParameterType>>(*this->parameter_values_);
+    return std::make_shared<std::vector<TParameterType>>(
+        *this->parameter_values_);
   }
 };
 
-
-}  // namespace nvm::containers
+}  // namespace nvm::sqlbuilder
 
 #endif

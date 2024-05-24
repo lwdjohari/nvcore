@@ -30,8 +30,8 @@
 #include <variant>
 #include <vector>
 
-#include "nvm/containers/record_def.h"
-namespace nvm::containers {
+#include "nvm/sqlbuilder/def.h"
+namespace nvm::sqlbuilder {
 
 template <typename TParameterType = DefaultPostgresParamType>
 class RecordInsert {
@@ -239,4 +239,4 @@ class RecordDelete {
   }
 };
 
-}  // namespace nvm::containers
+}  // namespace nvm::sqlbuilder

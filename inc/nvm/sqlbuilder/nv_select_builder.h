@@ -27,11 +27,11 @@
 #include <variant>
 #include <vector>
 
-#include "nvm/containers/record_def.h"
-#include "nvm/containers/record_filter.h"
-#include "nvm/containers/record_groupby.h"
-#include "nvm/containers/record_orderby.h"
-namespace nvm::containers {
+#include "nvm/sqlbuilder/def.h"
+#include "nvm/sqlbuilder/group_by.h"
+#include "nvm/sqlbuilder/order_by.h"
+#include "nvm/sqlbuilder/where.h"
+namespace nvm::sqlbuilder {
 
 struct RecordKey {
   std::string table;
@@ -607,7 +607,7 @@ class FromTableStatement {
         if (!first_element)
           query << (pretty_print ? ",\n" : ", ");
 
-        query << (pretty_print ? GenerateIndentation(level_+1) + "(\n" : " (")
+        query << (pretty_print ? GenerateIndentation(level_ + 1) + "(\n" : " (")
               << __GenerateSelectQuery(s, pretty_print) << ")"
               << (alias.empty() ? "" : " AS " + alias);
       }
@@ -1194,4 +1194,4 @@ std::string FromTableStatement<TParameterType>::__GetTableAliasFromParent(
   return select.TableAlias();
 }
 
-}  // namespace nvm::containers
+}  // namespace nvm::sqlbuilder

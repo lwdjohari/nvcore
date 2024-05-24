@@ -3,15 +3,15 @@
 #include <iostream>
 
 #include "catch2/catch_all.hpp"
-#include "nvm/containers/record_filter.h"
-#include "nvm/containers/record_operation.h"
-#include "nvm/containers/record_page.h"
-// #include "nvm/containers/record_sort.h"
+#include "nvm/sqlbuilder/where.h"
+#include "nvm/sqlbuilder/operation.h"
+#include "nvm/sqlbuilder/limit_offset.h"
+
 #include "nvm/logic.h"
 using namespace nvm;
 
 TEST_CASE("record-page", "[record-page][normal-case]") {
-  using RecordPage = nvm::containers::RecordPage;
+  using RecordPage = nvm::sqlbuilder::RecordPage;
 
   auto page = RecordPage(300, 15);
 
@@ -30,7 +30,7 @@ TEST_CASE("record-page", "[record-page][normal-case]") {
 }
 
 TEST_CASE("record-page-less-than-per-page", "[record-page][lt-per-page-case]") {
-  using RecordPage = nvm::containers::RecordPage;
+  using RecordPage = nvm::sqlbuilder::RecordPage;
 
   auto page = RecordPage(8, 15);
 
@@ -49,7 +49,7 @@ TEST_CASE("record-page-less-than-per-page", "[record-page][lt-per-page-case]") {
 }
 
 TEST_CASE("record-page-over-page", "[record-page][lt-per-page-case]") {
-  using RecordPage = nvm::containers::RecordPage;
+  using RecordPage = nvm::sqlbuilder::RecordPage;
 
   auto page = RecordPage(8, 15);
 
@@ -68,11 +68,11 @@ TEST_CASE("record-page-over-page", "[record-page][lt-per-page-case]") {
 }
 
 // TEST_CASE("record-sort", "[record-sort][normal-case]") {
-//   using OrderByStatement = nvm::containers::OrderByStatement;
-//   using SortField = nvm::containers::SortField;
-//   using SortType = nvm::containers::SortType;
-//   using RecordTable = nvm::containers::RecordTable;
-//   using FieldPinMode = nvm::containers::FieldPinMode;
+//   using OrderByStatement = nvm::sqlbuilder::OrderByStatement;
+//   using SortField = nvm::sqlbuilder::SortField;
+//   using SortType = nvm::sqlbuilder::SortType;
+//   using RecordTable = nvm::sqlbuilder::RecordTable;
+//   using FieldPinMode = nvm::sqlbuilder::FieldPinMode;
 
 //   auto sorter = OrderByStatement();
 //   auto user_table = std::make_shared<RecordTable>(RecordTable("users", "u"));
@@ -94,11 +94,11 @@ TEST_CASE("record-page-over-page", "[record-page][lt-per-page-case]") {
 // }
 
 TEST_CASE("record-filter", "[record-sort][normal-case]") {
-  using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
+  using DefaultPostgresParamType = nvm::sqlbuilder::DefaultPostgresParamType;
   using WhereStatement =
-      nvm::containers::WhereStatement<DefaultPostgresParamType>;
-  using SqlOperator = nvm::containers::SqlOperator;
-  using LogicOperator = nvm::containers::LogicOperator;
+      nvm::sqlbuilder::WhereStatement<DefaultPostgresParamType>;
+  using SqlOperator = nvm::sqlbuilder::SqlOperator;
+  using LogicOperator = nvm::sqlbuilder::LogicOperator;
   WhereStatement filter;
 
   // RecordClause& clause = filter.AddClause(6);
@@ -135,11 +135,11 @@ TEST_CASE("record-filter", "[record-sort][normal-case]") {
 }
 
 TEST_CASE("record-insert", "[record-op][normal-case]") {
-  using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
-  using RecordInsert = nvm::containers::RecordInsert<DefaultPostgresParamType>;
-  using RecordUpdate = nvm::containers::RecordUpdate<DefaultPostgresParamType>;
-  using RecordDelete = nvm::containers::RecordDelete<DefaultPostgresParamType>;
-  using SqlOperator = nvm::containers::SqlOperator;
+  using DefaultPostgresParamType = nvm::sqlbuilder::DefaultPostgresParamType;
+  using RecordInsert = nvm::sqlbuilder::RecordInsert<DefaultPostgresParamType>;
+  using RecordUpdate = nvm::sqlbuilder::RecordUpdate<DefaultPostgresParamType>;
+  using RecordDelete = nvm::sqlbuilder::RecordDelete<DefaultPostgresParamType>;
+  using SqlOperator = nvm::sqlbuilder::SqlOperator;
 
   // Example for RecordInsert
   auto insert_values =
@@ -163,11 +163,11 @@ TEST_CASE("record-insert", "[record-op][normal-case]") {
 }
 
 TEST_CASE("record-update", "[record-op][normal-case]") {
-  using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
-  using RecordInsert = nvm::containers::RecordInsert<DefaultPostgresParamType>;
-  using RecordUpdate = nvm::containers::RecordUpdate<DefaultPostgresParamType>;
-  using RecordDelete = nvm::containers::RecordDelete<DefaultPostgresParamType>;
-  using SqlOperator = nvm::containers::SqlOperator;
+  using DefaultPostgresParamType = nvm::sqlbuilder::DefaultPostgresParamType;
+  using RecordInsert = nvm::sqlbuilder::RecordInsert<DefaultPostgresParamType>;
+  using RecordUpdate = nvm::sqlbuilder::RecordUpdate<DefaultPostgresParamType>;
+  using RecordDelete = nvm::sqlbuilder::RecordDelete<DefaultPostgresParamType>;
+  using SqlOperator = nvm::sqlbuilder::SqlOperator;
 
   // Example for RecordUpdate
   auto update_values =
@@ -189,11 +189,11 @@ TEST_CASE("record-update", "[record-op][normal-case]") {
 }
 
 TEST_CASE("record-delete", "[record-op][normal-case]") {
-  using DefaultPostgresParamType = nvm::containers::DefaultPostgresParamType;
-  using RecordInsert = nvm::containers::RecordInsert<DefaultPostgresParamType>;
-  using RecordUpdate = nvm::containers::RecordUpdate<DefaultPostgresParamType>;
-  using RecordDelete = nvm::containers::RecordDelete<DefaultPostgresParamType>;
-  using SqlOperator = nvm::containers::SqlOperator;
+  using DefaultPostgresParamType = nvm::sqlbuilder::DefaultPostgresParamType;
+  using RecordInsert = nvm::sqlbuilder::RecordInsert<DefaultPostgresParamType>;
+  using RecordUpdate = nvm::sqlbuilder::RecordUpdate<DefaultPostgresParamType>;
+  using RecordDelete = nvm::sqlbuilder::RecordDelete<DefaultPostgresParamType>;
+  using SqlOperator = nvm::sqlbuilder::SqlOperator;
   // Example for RecordDelete
   auto delete_values =
       std::make_shared<std::vector<DefaultPostgresParamType>>();

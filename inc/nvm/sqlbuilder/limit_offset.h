@@ -22,7 +22,7 @@
 
 #include <cmath>
 #include <cstdint>
-namespace nvm::containers {
+namespace nvm::sqlbuilder {
 
 struct Page {
   size_t page;
