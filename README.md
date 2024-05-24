@@ -28,50 +28,165 @@ coffee/tea/soft-drink/energy-drink or all at once.
 ## NvSelect: Fluent SQL Builder
 
 ## NvValidator
+NvValidator is template base fluent validator that can be chaining in contexable manner and 
+has reusable common general case validators.
+For flexibility, NvValidator is also supported custom lambda validation.
+
+### Example #1
+General example
 ```cxx
+#include <iostream>
+#include <string>
+#include <cstdint>
+#include <optional>
+
+#include "nvm/nv_validator.h"
+
+class CustomObject {
+ public:
+  CustomObject(int a, double b) noexcept : a_(a), b_(b) {}
+  int GetA() const noexcept {
+    return a_;
+  }
+  double GetB() const noexcept {
+    return b_;
+  }
+
+ private:
+  int a_;
+  double b_;
+};
+
+int main(){
+  using NvValidator = nvm::validators::NvValidator;
+  using ValidationOperator = nvm::validators::ValidationOperator;
+  using ValidationResult = nvm::validators::ValidationResult;
+  
+  NvValidator validator;
+  
+  std::string value = "john_doe";
+  std::string email = "john.doe@example.com";
+  uint32_t age = 25;
+  std::optional<std::string> optional_value = "Hello world";
+  
+  CustomObject obj(10, 3.14);
+  
+  validator.Validate<std::string>("username", value, true)
+    .IsNotEmptyNullOrWhiteSpace(1001, "Username must not be empty")
+    .IsLength(8, 20, 1002, "Username length must be between 8 and 20")
+    .IsAlphanumeric({'_'}, 1003, "Username must be alphanumeric");
+  
+  validator.Validate<std::string>("email", email, true)
+    .IsLength(8, 80, 1004, "Email length must be between 8 and 80")
+    .IsEmail({'-', '_', '.'}, 1005, "Email must be valid");
+  
+  validator.Validate<uint32_t>("age", age, true)
+    .IsGreaterThanEqual(18, 1006, "Minimum age must be 18 years old");
+  
+  validator
+    .Validate<std::optional<std::string>>("optional_value", optional_value,
+                                          true)
+    .IsNotEmpty(3002, "Optional value must not be empty");
+  
+  validator.Validate<CustomObject>("custom_object", obj, true)
+    .IsMust([](const CustomObject& o) noexcept { return o.GetA() > 5; }, 4001,
+            "CustomObject.a must be greater than 5")
+    .IsMust([](const CustomObject& o) noexcept { return o.GetB() < 4.0; },
+            4002, "CustomObject.b must be less than 4.0");
+  
+  const ValidationResult& result = validator.ValidateAll();
+  if (!result.is_valid) {
+    std::cout << result.GetErrorAsString();
+  } else {
+    std::cout << "All validations passed!" << std::endl;
+  }
+
+  return 0;
+}
+```
+
+### Example #2
+Object that has logical operator overloading
+
+In this case we are using nvm::dates::DateTime which implemented logical operator overloading.
+```cxx
+using NvValidator = nvm::validators::NvValidator;
+using ValidationOperator = nvm::validators::ValidationOperator;
+using ValidationResult = nvm::validators::ValidationResult;
+using DateTime = nvm::dates::DateTime;
+
+NvValidator validator;
+
+auto time1 = DateTime::UtcNow();
+auto time2 = DateTime(time1);
+
+validator.Validate<DateTime>("datetime",time1,true)
+  .IsEqual(time2,1001,"Time is not equal!");
+
+const ValidationResult& result = validator.ValidateAll();
+if (!result.is_valid) {
+  std::cout << result.GetErrorAsString();
+} else {
+  std::cout << "All validations passed!" << std::endl;
+}
+```
+
+### Example #3
+Fluent validator will be less usable if it has rigid design, <br/>
+to support complex validations scenario that we are faces day-to day <br/>
+NvValidator have feature of Custom Lambda Validator.
+
+Lambda function signature
+```cxx
+[](const T&) noexcept {
+  bool state;
+  // your custom implementation
+  return state;
+}
+```
+Implementation
+```cxx
+class Balance {
+ public:
+  Balance(const std::string& account_number, double amount) noexcept
+                  : account_number_(account_number), amount_(amount) {}
+
+  double GetBalance() const noexcept {
+    return amount_;
+  }
+
+  std::string AccountNumber() const noexcept {
+    return account_number_;
+  }
+
+ private:
+  std::string account_number_;
+  double amount_;
+};
+
 using NvValidator = nvm::validators::NvValidator;
 using ValidationOperator = nvm::validators::ValidationOperator;
 using ValidationResult = nvm::validators::ValidationResult;
 
 NvValidator validator;
 
-std::string value = "john_doe";
-std::string email = "john.doe@example.com";
-uint32_t age = 25;
-std::optional<std::string> optional_value = "Hello world";
+auto balance1 = Balance("90979", 37000);
+auto balance2 = Balance("90979", 98000);
 
-CustomObject obj(10, 3.14);
-
-validator.Validate<std::string>("username", value, true)
-  .IsNotEmptyNullOrWhiteSpace(1001, "Username must not be empty")
-  .IsLength(3, 20, 1002, "Username length must be between 3 and 20")
-  .IsAlphanumeric({'_'}, 1003, "Username must be alphanumeric");
-
-validator.Validate<std::string>("email", email, true)
-  .IsLength(8, 80, 1004, "Email length must be between 8 and 80")
-  .IsEmail({'-', '_', '.'}, 1005, "Email must be valid");
-
-validator.Validate<uint32_t>("age", age, true)
-  .IsGreaterThanEqual(18, 1006, "Minimum age must be 18 years old");
-
-validator
-  .Validate<std::optional<std::string>>("optional_value", optional_value,
-                                        true)
-  .IsNotEmpty(3002, "Optional value must not be empty");
-
-validator.Validate<CustomObject>("custom_object", obj, true)
-  .IsMust([](const CustomObject& o) noexcept { return o.GetA() > 5; }, 4001,
-          "CustomObject.a must be greater than 5")
-  .IsMust([](const CustomObject& o) noexcept { return o.GetB() < 4.0; },
-          4002, "CustomObject.b must be less than 4.0");
+validator.Validate<Balance>("custom", balance1, true)
+  .IsMust([&balance2](const Balance& b) noexcept {
+    return b.GetBalance() < balance2.GetBalance();
+  });
 
 const ValidationResult& result = validator.ValidateAll();
 if (!result.is_valid) {
-std::cout << result.GetErrorAsString();
+  std::cout << result.GetErrorAsString();
 } else {
-std::cout << "All validations passed!" << std::endl;
+  std::cout << "All validations passed!" << std::endl;
 }
 ```
+
+
 ## DateTime
 
 ## How to build
