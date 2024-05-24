@@ -28,9 +28,10 @@ coffee/tea/soft-drink/energy-drink or all at once.
 ## NvSelect: Fluent SQL Builder
 
 ## NvValidator
-NvValidator is template base fluent validator that can be chaining in contexable manner and 
-has reusable common general case validators.
-For flexibility, NvValidator is also supported custom lambda validation.
+NvValidator is template base fluent validator that can be chaining in contexable manner and<br/>
+has reusable common general case validators.<br/>
+For flexibility, NvValidator is also supported custom lambda validation and <br/>
+class that implemented custom logic overloading operators.
 
 ### Example #1
 General example
@@ -188,6 +189,98 @@ if (!result.is_valid) {
 
 
 ## DateTime
+Nv DateTime is an abstraction of Howard Hinnant Date library.<br/>
+We are facing the same painstakingly handling datetime in C++ especially in DateTime with Timezone.<br/>
+Nv DateTime is build to supported DateTime with IANA Timezone handling.
+
+Timezone DB for this abstraction currently is set to use the host timezone DB.<br/>
+For complete example, please see ```tests/nvm/datetime_test.cc```.
+
+### Include
+```cxx
+#include "nvm/dates/datetime.h"
+```
+
+### Local time Now() with the host Timezone
+```cxx
+using DateTime = nvm::dates::DateTime;
+
+auto current_local_time = DateTime::Now();
+std::cout << "Local time: " << current_local_time << std::endl;
+
+```
+
+### UTC time UtcNow() with the UTC Timezone
+```cxx
+using DateTime = nvm::dates::DateTime;
+
+auto utc_local_time = DateTime::UtcNow();
+std::cout << "UTC time: " << utc_local_time << std::endl;
+
+```
+
+### Specified the DateTime part and the IANA Timezone
+```cxx
+using DateTime = nvm::dates::DateTime;
+
+auto new_york_time = DateTime(2022, 7, 10, 02, 00, 00, 00, "America/New_York");
+std::cout << "New York Time: " << new_york_time << std::endl;
+
+```
+
+### Example 1: Get Start of Month and End of Month from current date.
+```cxx
+using DateTime = dates::DateTime;
+
+auto jkt_time = DateTime(2022, 7, 10, 13, 0, 0, 0, "Asia/Jakarta");
+
+auto first_day_of_month = jkt_time.GetStartOfMonth();
+auto last_day_of_month = jkt_time.GetEndOfMonth();
+
+std::cout << "RESULT" << std::endl;
+std::cout << "FIRST   : " << first_day_of_month << std::endl;
+std::cout << "LAST    : " << last_day_of_month << std::endl;
+
+```
+
+### Example 2: Add or Subtract Duration from DateTime.
+```cxx
+using namespace nvm::dates;
+
+auto seconds = 7200;
+std::chrono::seconds duration(seconds);
+auto now = DateTime();
+
+// Display the current local time
+std::cout << "Current local time: \n" << now << std::endl;
+
+auto next = now + ToNanosecondDuration(duration);
+
+// Display the local time after add the duration
+std::cout << "Local time after adding " << seconds << " seconds: \n"
+          << next << std::endl;
+
+auto result = next - now;
+std::chrono::seconds diff =
+    std::chrono::duration_cast<std::chrono::seconds>(result.value());
+
+std::cout << "Diff in second: \n" << diff.count() << std::endl;
+
+```
+
+### Example 3: Convert to other IANA Timezone
+```cxx
+using DateTime = dates::DateTime;
+auto jkt_time = DateTime(2022, 7, 10, 13, 00, 00, 00, "Asia/Jakarta");
+auto res_utc = jkt_time.ToTimezone("Etc/UTC");
+auto res_new_york = jkt_time.ToTimezone("America/New_York");
+
+std::cout << "RESULT" << std::endl;
+std::cout << "Jakarta : " << jkt_time << std::endl;
+std::cout << "UTC     : " << res_utc << std::endl;
+std::cout << "New York: " << res_new_york << std::endl;
+
+```
 
 ## How to build
 Requirement:
