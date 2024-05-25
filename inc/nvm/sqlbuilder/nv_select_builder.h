@@ -616,58 +616,272 @@ class FromTableStatement {
   }
 };
 
+enum class FieldDefMode {
+  FieldRaw = 0,
+  FieldWType = 1,
+  FnStaticParameter = 2,
+  FnParameterizedValues = 3
+};
+
+// cppcheck-suppress unknownMacro
+NVM_ENUM_CLASS_DISPLAY_TRAIT(FieldDefMode)
+
 template <typename TParameterType = DefaultPostgresParamType>
-struct FieldDef {
-  std::string field;
-  std::optional<std::string> table_alias;
-  bool enclose_field_name;
-  SqlAggregateFunction aggregate_fn;
-  std::optional<std::string> field_alias;
+class FieldDef {
+ private:
+  std::string field_;
+  std::optional<std::string> table_alias_;
+  const std::vector<std::string> static_param_values_;
+  std::shared_ptr<std::vector<TParameterType>> parameter_values_;
+  const std::vector<TParameterType> fn_values_;
+  std::string function_name_;
+  std::string parameter_format_;
+  bool enclose_field_name_;
+  SqlAggregateFunction aggregate_fn_;
+  std::optional<std::string> field_alias_;
+  uint32_t start_parameter_index_;
+  uint32_t current_parameter_index_;
   uint32_t level_;
+  FieldDefMode mode_;
+
+  uint32_t ProcessFunctionParameterIndex(
+      const int32_t& current_param_index, const std::string& parameter_format,
+      const std::vector<TParameterType>& parameter_values,
+      const std::vector<std::string>& static_param_values) {
+    if (parameter_format.empty()) {
+      return current_param_index;
+    }
+
+    size_t index_params = 0;
+    uint32_t param_index = uint32_t(current_param_index);
+
+    for (char ch : parameter_format) {
+      if (ch == 'v') {
+        parameter_values_->push_back(fn_values_.at(index_params));
+        param_index += 1;
+        index_params += 1;
+      }
+    }
+
+    return param_index;
+  }
+
+  std::string BuildField() const {
+    std::ostringstream oss;
+
+    // Translate to sql keyword
+    if (aggregate_fn_ == SqlAggregateFunction::Distinct) {
+      oss << AggregateFunctionToString(aggregate_fn_) << " ";
+    } else if (aggregate_fn_ != SqlAggregateFunction::None) {
+      oss << AggregateFunctionToString(aggregate_fn_) << "(";
+    }
+
+    // append alias if any
+    if (table_alias_.has_value()) {
+      oss << table_alias_.value() << ".";
+    }
+
+    oss << field_;
+
+    // determine the function closure
+    if (aggregate_fn_ == SqlAggregateFunction::Distinct) {
+      oss << "";
+    } else if (aggregate_fn_ != SqlAggregateFunction::None) {
+      oss << ")";
+    }
+
+    // append new name alias if any
+    if (field_alias_.has_value()) {
+      oss << " AS " << field_alias_.value();
+    }
+
+    return oss.str();
+  }
+
+  std::string BuildFunctionWithDynamicParameters() const {
+    uint32_t param_index = start_parameter_index_;
+    size_t index_params = 0;
+    size_t index_statics = 0;
+    bool is_first_element = true;
+    std::ostringstream fn_call;
+
+    fn_call << function_name_ << "(";
+    for (char ch : parameter_format_) {
+      if (ch == 's' || ch == 'v') {
+        fn_call << (is_first_element ? "" : ", ");
+      }
+
+      if (ch == 's') {
+        fn_call << static_param_values_[index_statics];
+        index_statics += 1;
+        is_first_element = false;
+      } else if (ch == 'v') {
+        fn_call << "$" << param_index;
+        param_index += 1;
+        index_params += 1;
+        is_first_element = false;
+      }
+    }
+
+    fn_call << ")"
+            << (field_alias_.has_value() ? " AS " + field_alias_.value() : "");
+
+    return fn_call.str();
+  }
+
+  std::string BuildFunctionWithStaticParameters() const {
+    std::ostringstream fn_call;
+    fn_call << function_name_ << "(";
+    for (size_t i = 0; i < static_param_values_.size(); ++i) {
+      if (i > 0)
+        fn_call << ", ";
+      fn_call << static_param_values_[i];
+    }
+    fn_call << ")"
+            << (field_alias_.has_value() ? " AS " + field_alias_.value() : "");
+
+    return fn_call.str();
+  }
+
+ public:
+  /// @brief Normal Field defintion
+  /// @param field
+  /// @param table_alias
+  /// @param enclose_field_name
+  /// @param aggregate_fn
+  /// @param field_alias
+  /// @param level
+  /// @param mode
   explicit FieldDef(
       const std::string& field,
       const std::optional<std::string>& table_alias = std::nullopt,
       bool enclose_field_name = false,
       SqlAggregateFunction aggregate_fn = SqlAggregateFunction::None,
       const std::optional<std::string>& field_alias = std::nullopt,
-      uint32_t level = 0)
-                  : field(field),
-                    table_alias(table_alias),
-                    enclose_field_name(enclose_field_name),
-                    aggregate_fn(aggregate_fn),
-                    field_alias(field_alias),
-                    level_(level) {}
+      uint32_t level = 0, FieldDefMode mode = FieldDefMode::FieldWType)
+                  : field_(field),
+                    table_alias_(table_alias),
+                    static_param_values_(),
+                    parameter_values_(nullptr),
+                    fn_values_(),
+                    function_name_(),
+                    parameter_format_(),
+                    enclose_field_name_(enclose_field_name),
+                    aggregate_fn_(aggregate_fn),
+                    field_alias_(field_alias),
+                    start_parameter_index_(),
+                    current_parameter_index_(),
+                    level_(level),
+                    mode_(mode) {}
+
+  /// @brief Function call static definitions
+  /// @param function_name
+  /// @param static_param_values
+  /// @param level
+  /// @param alias
+  explicit FieldDef(const std::string& function_name,
+                    const std::vector<std::string>& static_param_values,
+                    uint32_t level,
+                    const std::optional<std::string>& alias = std::nullopt)
+                  : field_(),
+                    table_alias_(),
+                    static_param_values_(static_param_values),
+                    parameter_values_(nullptr),
+                    fn_values_(),
+                    function_name_(function_name),
+                    parameter_format_(),
+                    enclose_field_name_(),
+                    aggregate_fn_(SqlAggregateFunction::None),
+                    field_alias_(alias),
+                    start_parameter_index_(),
+                    current_parameter_index_(),
+                    level_(level),
+                    mode_(FieldDefMode::FnStaticParameter) {}
+
+  /// @brief Function call for parameterized parameters definitions
+  /// @param function_name
+  /// @param parameter_format
+  /// @param parameter_values
+  /// @param static_param_values
+  /// @param param_index
+  /// @param level
+  /// @param alias
+  explicit FieldDef(
+      const std::string& function_name, const std::string& parameter_format,
+      std::shared_ptr<std::vector<TParameterType>> parameter_values,
+      const std::vector<TParameterType>& fn_param_values,
+      const std::vector<std::string>& static_param_values, uint32_t param_index,
+      uint32_t level, const std::optional<std::string>& alias = std::nullopt)
+                  : field_(),
+                    table_alias_(),
+                    static_param_values_(static_param_values),
+                    parameter_values_(parameter_values),
+                    fn_values_(fn_param_values),
+                    function_name_(function_name),
+                    parameter_format_(parameter_format),
+                    enclose_field_name_(),
+                    aggregate_fn_(SqlAggregateFunction::None),
+                    field_alias_(alias),
+                    start_parameter_index_(param_index),
+                    current_parameter_index_(ProcessFunctionParameterIndex(
+                        param_index, parameter_format, fn_values_,
+                        static_param_values_)),
+                    level_(level),
+                    mode_(FieldDefMode::FnParameterizedValues) {}
+
+  FieldDefMode Mode() const {
+    return mode_;
+  }
+
+  uint32_t GetCurrentParameterIndex() const {
+    return current_parameter_index_;
+  }
+
+  std::string Field() const {
+    return field_;
+  }
+
+  std::optional<std::string> TableAlias() const {
+    return table_alias_;
+  }
+
+  std::optional<std::string> FieldAlias() const {
+    return field_alias_;
+  }
+
+  bool EncloseFieldName() const {
+    return enclose_field_name_;
+  }
+
+  SqlAggregateFunction AggregateFunction() const {
+    return aggregate_fn_;
+  }
+
+  std::string FunctionName() const {
+    return function_name_;
+  }
+
+  const std::vector<std::string>& StaticParameterValues() {
+    return static_param_values_;
+  }
+
+  std::shared_ptr<std::vector<TParameterType>> Values() const {
+    return parameter_values_;
+  }
 
   std::string GenerateQuery() const {
-    std::ostringstream oss;
-
-    // Translate to sql keyword
-    if (aggregate_fn == SqlAggregateFunction::Distinct) {
-      oss << AggregateFunctionToString(aggregate_fn) << " ";
-    } else if (aggregate_fn != SqlAggregateFunction::None) {
-      oss << AggregateFunctionToString(aggregate_fn) << "(";
+    switch (mode_) {
+      case FieldDefMode::FieldRaw:
+        return BuildField();
+      case FieldDefMode::FieldWType:
+        return BuildField();
+      case FieldDefMode::FnStaticParameter:
+        return BuildFunctionWithStaticParameters();
+      case FieldDefMode::FnParameterizedValues:
+        return BuildFunctionWithDynamicParameters();
+      default:
+        return std::string();
     }
-
-    // append alias if any
-    if (table_alias.has_value()) {
-      oss << table_alias.value() << ".";
-    }
-
-    oss << field;
-
-    // determine the function closure
-    if (aggregate_fn == SqlAggregateFunction::Distinct) {
-      oss << "";
-    } else if (aggregate_fn != SqlAggregateFunction::None) {
-      oss << ")";
-    }
-
-    // append new name alias if any
-    if (field_alias.has_value()) {
-      oss << " AS " << field_alias.value();
-    }
-
-    return oss.str();
   }
 
   std::string AggregateFunctionToString(SqlAggregateFunction fn) const {
@@ -692,8 +906,8 @@ struct FieldDef {
 
 /// @brief Fluent SQL Select Builder. TParameterType is typedef of
 /// std::variant<supported_data_type_by_cpp_for_db>. You can customize to your
-/// supported c++ data type for any database based on the db connector that you
-/// are use.
+/// supported c++ data type for any database based on the db connector that
+/// you are use.
 /// @tparam TParameterType DefaultPostgresParamType.
 template <typename TParameterType>
 class NvSelect final {
@@ -787,8 +1001,8 @@ class NvSelect final {
                     group_by_(nullptr),
                     subquery_where_parent_(nullptr) {}
 
-  /// @brief DO NOT USE DIRECTLY, SUBQUERY FROM NESTED WHERE STATEMENT USE THIS
-  /// CONST
+  /// @brief DO NOT USE DIRECTLY, SUBQUERY FROM NESTED WHERE STATEMENT USE
+  /// THIS CONST
   /// @param current_param_index
   /// @param level
   /// @param from_obj
@@ -890,9 +1104,77 @@ class NvSelect final {
                   const std::optional<std::string>& table_alias,
                   const std::optional<std::string>& field_alias,
                   SqlAggregateFunction aggregate_fn, bool enclose_field_name) {
-    fields_.emplace_back(
-        FieldDef<TParameterType>(field, table_alias, enclose_field_name,
-                                 aggregate_fn, field_alias, level_));
+    fields_.emplace_back(field, table_alias, enclose_field_name, aggregate_fn,
+                         field_alias, level_, FieldDefMode::FieldWType);
+    return *this;
+  }
+
+  // Non template Field
+
+  /// @brief Define select field/column.
+  /// When using F the tuple row static type generation will be not available
+  /// for this field.
+  /// @param field
+  /// @return
+  NvSelect& F(const std::string& field) {
+    return F(field, std::nullopt, std::nullopt, SqlAggregateFunction::None,
+             false);
+  }
+
+  /// @brief Define select field/column.
+  /// When using F the tuple row static type generation will be not available
+  /// for this field.
+  /// @param field
+  /// @param table_alias
+  /// @return
+  NvSelect& F(const std::string& field,
+              const std::optional<std::string>& table_alias) {
+    return F(field, table_alias, std::nullopt, SqlAggregateFunction::None,
+             false);
+  }
+
+  /// @brief Define select field/column.
+  /// When using F the tuple row static type generation will be not available
+  /// for this field.
+  /// @param field
+  /// @param table_alias
+  /// @param field_alias
+  /// @return
+  NvSelect& F(const std::string& field,
+              const std::optional<std::string>& table_alias,
+              const std::optional<std::string>& field_alias) {
+    return F(field, table_alias, field_alias, SqlAggregateFunction::None,
+             false);
+  }
+
+  /// @brief Define select field/column.
+  /// When using F the tuple row static type generation will be not available
+  /// for this field.
+  /// @param field
+  /// @param table_alias
+  /// @param aggregate_fn
+  /// @return
+  NvSelect& F(const std::string& field,
+              const std::optional<std::string>& table_alias,
+              SqlAggregateFunction aggregate_fn) {
+    return F(field, table_alias, std::nullopt, aggregate_fn, false);
+  }
+
+  /// @brief Define select field/column.
+  /// When using F the tuple row static type generation will be not available
+  /// for this field.
+  /// @param field
+  /// @param table_alias
+  /// @param field_alias
+  /// @param aggregate_fn
+  /// @param enclose_field_name
+  /// @return
+  NvSelect& F(const std::string& field,
+              const std::optional<std::string>& table_alias,
+              const std::optional<std::string>& field_alias,
+              SqlAggregateFunction aggregate_fn, bool enclose_field_name) {
+    fields_.emplace_back(field, table_alias, enclose_field_name, aggregate_fn,
+                         field_alias, level_, FieldDefMode::FieldRaw);
     return *this;
   }
 
@@ -944,7 +1226,8 @@ class NvSelect final {
             parameter_values_, this, current_param_index_, level_);
       }
 
-      // if (from_table_->GetCurrentParameterIndex() != current_param_index_) {
+      // if (from_table_->GetCurrentParameterIndex() != current_param_index_)
+      // {
       //   from_table_->UpdateCurrentParamIndex(current_param_index_);
       // }
 
@@ -1022,41 +1305,112 @@ class NvSelect final {
     return *group_by_;
   }
 
-  // NvSelect& FnCall(const std::string& fn_name,
-  //                     const std::vector<std::string>& param_values) {
-  //   std::ostringstream fn_call;
-  //   fn_call << fn_name << "(";
-  //   for (size_t i = 0; i < param_values.size(); ++i) {
-  //     if (i > 0) fn_call << ", ";
-  //     fn_call << param_values[i];
-  //   }
-  //   fn_call << ")";
-  //   elements_.emplace_back(fn_call.str());
-  //   return *this;
-  // }
+  /// @brief Static function call in SELECT field.
+  /// For SQL string make sure you have sanitize the input value,
+  /// passing sql string inside this function will bypass the driver or db
+  /// level sanitazion process.
+  /// @example
+  /// ```cxx
+  /// // Execute LOWER(u.username) AS username
+  /// select.Fn("LOWER",{"u.username"},"username");
+  /// ```
+  /// @param fn_name
+  /// @param param_values
+  /// @param field_alias
+  /// @return
+  NvSelect& Fn(const std::string& fn_name,
+               const std::vector<std::string>& param_values,
+               const std::optional<std::string>& field_alias = std::nullopt) {
+    // TARGET
+    // explicit FieldDef(const std::string& function_name,
+    //                   const std::vector<std::string>& static_param_values,
+    //                   uint32_t level,
+    //                   const std::optional<std::string>& alias = std::nullopt)
 
-  // NvSelect& FnCall(const std::string& fn_name,
-  //                     const std::string& parameter_format,
-  //                     const std::vector<TParameterType>& param_values) {
-  //   std::ostringstream fn_call;
-  //   fn_call << fn_name << "(";
-  //   size_t param_index = 0;
-  //   for (char ch : parameter_format) {
-  //     if (ch == 's') {
-  //       fn_call
-  //           << param_values[param_index++];  // Assuming param_values contain
-  //                                            // strings or can be converted
-  //     } else if (ch == 'v') {
-  //       fn_call << "$" << current_param_index_++;
-  //       parameter_values_.emplace_back(param_values[param_index++]);
-  //     } else {
-  //       fn_call << ch;
-  //     }
-  //   }
-  //   fn_call << ")";
-  //   elements_.emplace_back(fn_call.str());
-  //   return *this;
-  // }
+    fields_.emplace_back(fn_name, param_values, level_, field_alias);
+
+    // No need to update current_parameter_index
+    return *this;
+  }
+
+  /// @brief Adavance parameterized function call. For Nested function called
+  /// still in WIP.
+  /// @param fn_name function name to execute
+  /// @param parameter_list_format %v : TParameterType parameter value, %s :
+  /// static value. Implementations will automatically set the first parameter
+  /// format found in parameter_list_format. "%"
+  /// @param param_values
+  /// @param static_param_values
+  /// @param alias
+  /// @return
+  NvSelect& Fn(const std::string& fn_name,
+               const std::string& parameter_list_format,
+               const std::vector<TParameterType>& param_values,
+               const std::vector<std::string>& static_param_values =
+                   std::vector<std::string>(),
+               std::optional<std::string> alias = std::nullopt) {
+    // TARGET
+    // explicit FieldDef(
+    // const std::string& function_name, const std::string& parameter_format,
+    // std::shared_ptr<std::vector<TParameterType>> parameter_values,
+    // const std::vector<TParameterType>& fn_param_values,
+    // const std::vector<std::string>& static_param_values, uint32_t
+    // param_index, uint32_t level, const std::optional<std::string>& alias =
+    // std::nullopt)
+
+    fields_.emplace_back(fn_name, parameter_list_format, parameter_values_,
+                         param_values, static_param_values,
+                         current_param_index_, level_, alias);
+
+    // sync the current param index
+    auto f = fields_.back();
+    current_param_index_ = f.GetCurrentParameterIndex();
+
+    return *this;
+  }
+
+  template <typename T>
+  NvSelect& Fn(const std::string& fn_name,
+               const std::vector<std::string>& param_values,
+               const std::optional<std::string>& field_alias = std::nullopt) {
+    // TARGET
+    // explicit FieldDef(const std::string& function_name,
+    //                   const std::vector<std::string>& static_param_values,
+    //                   uint32_t level,
+    //                   const std::optional<std::string>& alias = std::nullopt)
+
+    fields_.emplace_back(fn_name, param_values, level_, field_alias);
+
+    // No need to update current_parameter_index
+    return *this;
+  }
+
+  template <typename T>
+  NvSelect& Fn(const std::string& fn_name,
+               const std::string& parameter_list_format,
+               const std::vector<TParameterType>& param_values,
+               const std::vector<std::string>& static_param_values =
+                   std::vector<std::string>(),
+               std::optional<std::string> alias = std::nullopt) {
+    // TARGET
+    // explicit FieldDef(
+    // const std::string& function_name, const std::string& parameter_format,
+    // std::shared_ptr<std::vector<TParameterType>> parameter_values,
+    // const std::vector<TParameterType>& fn_param_values,
+    // const std::vector<std::string>& static_param_values, uint32_t
+    // param_index, uint32_t level, const std::optional<std::string>& alias =
+    // std::nullopt)
+
+    fields_.emplace_back(fn_name, parameter_list_format, parameter_values_,
+                         param_values, static_param_values,
+                         current_param_index_, level_, alias);
+
+    // sync the current param index
+    auto f = fields_.back();
+    current_param_index_ = f.GetCurrentParameterIndex();
+
+    return *this;
+  }
 
   /// @brief Build and Generate SQL string in this NvSelect object
   /// @param pretty_print

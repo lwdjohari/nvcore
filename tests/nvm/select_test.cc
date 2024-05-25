@@ -115,6 +115,101 @@ TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
   REQUIRE(true == true);
 }
 
+TEST_CASE("select-join-complex-2", "[validator][normal-case]") {
+  // using Validator = nvm::sqlbuilder::validations::Validator;
+  using DefaultPostgresParamType = nvm::sqlbuilder::DefaultPostgresParamType;
+  using NvSelect = nvm::sqlbuilder::NvSelect<DefaultPostgresParamType>;
+  using SqlOperator = nvm::sqlbuilder::SqlOperator;
+  using RecordKey = nvm::sqlbuilder::RecordKey;
+  using SqlAggregateFn = nvm::sqlbuilder::SqlAggregateFunction;
+  using ParameterParser =
+      nvm::sqlbuilder::PostgresDefaultParameterParser<DefaultPostgresParamType>;
+
+  std::string service_code("RS");
+  std::string date_format = "DD-MON-YYYY";
+  auto equipment_types = std::vector<std::string>({"HMT", "HLB"});
+
+  auto select = std::make_unique<NvSelect>(1);
+
+  // clang-format off
+  
+  (*select)
+    .Field<int32_t>("equipment_id","e")
+    .Field<int32_t>("company_id","c")
+    .Field<int32_t>("service_id","s")
+    .Field<int32_t>("unit_type_id","e")
+    .Field<int32_t>("unit_class_id","e")
+    .Field<int32_t>("unit_subclass_id","e")
+    .Field<std::string>("reg_id","e")
+    .Field<std::string>("code","e", "equipment_code")
+    .Fn<std::string>("UPPER",{"c.name"},"company_name")
+    // TO_CHAR(e.entry_date,'DD-MON-YYYY')
+    .Fn<std::string>("TO_CHAR", "%s %v",{date_format},{"e.entry_date"}, "entry_date")
+    // TO_CHAR(e.termination_date,'DD-MON-YYYY')
+    .Fn("TO_CHAR", "%s %v",{date_format},{"e.termination_date"}, "termination_date")
+    .Field<std::string>("name","s","service_name")
+    .Field<std::string>("code","ut","unit_type_code")
+    .Field<std::string>("name","ut","unit_type_name")
+    .Field<std::string>("code","uc","unit_class_code")
+    .Field<std::string>("name","uc","unit_class_name")
+    .Field<std::string>("code","us","unit_sub_class_code")
+    .Field<std::string>("name","us", "unit_subclass_name")
+    .Field<int16_t>("flags","e")
+    .Field<int16_t>("status","e")
+    .Field<std::string>("username","ua","add_username")
+    .Field<std::string>("username","um", "mod_username")
+    .From()
+      .AddTable("equipment","e")
+    .EndFromTableBlock()
+    .Join()
+      .InnerJoin(
+        RecordKey("equipment","equipment_type_id","e"),
+        RecordKey("equipment_type","equipment_type_id","ut"))
+      .InnerJoin(
+        RecordKey("equipment","equipment_class_id","e"),
+        RecordKey("equipment_class","equipment_class_id","uc"))
+      .InnerJoin(
+        RecordKey("equipment","equipment_sub_class_id","e"),
+        RecordKey("equipment_sub_class","equipment_sub_class_id","us"))
+      .InnerJoin(
+        RecordKey("equipment","service_id","e"),
+        RecordKey("services","service_id","s"))
+      .InnerJoin(
+        RecordKey("services","company_id","s"),
+        RecordKey("company","company_id","c"))
+      .LeftJoin(
+        RecordKey("equipment","add_by","e"),
+        RecordKey("users","user_id","ua"))
+      .LeftJoin(
+        RecordKey("equipment","mod_by","e"),
+        RecordKey("users","user_id","um"))
+      .InnerJoin(
+        RecordKey("equipment","equipment_id","e"),
+        RecordKey("ad","equipment_id","ad"))
+    .EndJoinBlock()
+    .Where()
+        .AddConditionIn("unit_type_code",equipment_types)
+        .And()
+        .AddCondition("s.service_code",SqlOperator::kEqual, service_code)
+      .EndWhereBlock()
+    .OrderBy()
+      .Asc("company_name")
+      .Asc("service_name")
+      .Asc("unit_type_code")
+      .Asc("unit_type_class_code")
+    .EndOrderByBlock();
+
+  // clang-format on
+
+  std::cout << select->GenerateQuery(true) << std::endl;
+
+  ParameterParser parser(select->Values());
+  std::cout << "\nPARAMETER VALUES:" << std::endl;
+  std::cout << parser.GetAllParameterValuesAsString() << std::endl;
+
+  REQUIRE(true == true);
+}
+
 TEST_CASE("select-test-complex-2", "[validator][normal-case]") {
   using DefaultPostgresParamType = nvm::sqlbuilder::DefaultPostgresParamType;
   using NvSelect = nvm::sqlbuilder::NvSelect<DefaultPostgresParamType>;
