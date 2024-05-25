@@ -652,8 +652,8 @@ std::cout << "New York: " << res_new_york << std::endl;
 
 # How to build [[Top]](#nvcore)
 Requirement:
-1. CMake
-2. Clang or GCC C++17 Compiler (currently developed using clang)
+1. CMake minimal v3.10.
+2. Clang or GCC C++17 Compiler (currently build using clang compiler).
 
 Build:
 
