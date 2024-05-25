@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "catch2/catch_all.hpp"
+#include "nvm/dates/datetime.h"
 #include "nvm/nv_validator.h"
 
 using namespace nvm;
@@ -22,8 +23,25 @@ class CustomObject {
   double b_;
 };
 
+class Balance {
+ public:
+  Balance(const std::string& account_number, double amount) noexcept
+                  : account_number_(account_number), amount_(amount) {}
+
+  double GetBalance() const noexcept {
+    return amount_;
+  }
+
+  std::string AccountNumber() const noexcept {
+    return account_number_;
+  }
+
+ private:
+  std::string account_number_;
+  double amount_;
+};
+
 TEST_CASE("validation-test", "[validator][normal-case]") {
-  
   using NvValidator = nvm::validators::NvValidator;
   using ValidationOperator = nvm::validators::ValidationOperator;
   using ValidationResult = nvm::validators::ValidationResult;
@@ -59,6 +77,55 @@ TEST_CASE("validation-test", "[validator][normal-case]") {
               "CustomObject.a must be greater than 5")
       .IsMust([](const CustomObject& o) noexcept { return o.GetB() < 4.0; },
               4002, "CustomObject.b must be less than 4.0");
+
+  const ValidationResult& result = validator.ValidateAll();
+  if (!result.is_valid) {
+    std::cout << result.GetErrorAsString();
+  } else {
+    std::cout << "All validations passed!" << std::endl;
+  }
+
+  REQUIRE(result.is_valid == true);
+}
+
+TEST_CASE("validation-datetime-test", "[validator][normal-case]") {
+  using NvValidator = nvm::validators::NvValidator;
+  using ValidationOperator = nvm::validators::ValidationOperator;
+  using ValidationResult = nvm::validators::ValidationResult;
+  using DateTime = nvm::dates::DateTime;
+
+  NvValidator validator;
+
+  auto time1 = DateTime::UtcNow();
+  auto time2 = DateTime(time1);
+
+  validator.Validate<DateTime>("datetime", time1, true)
+      .IsEqual(time2, 1001, "Time is not equal!");
+
+  const ValidationResult& result = validator.ValidateAll();
+  if (!result.is_valid) {
+    std::cout << result.GetErrorAsString();
+  } else {
+    std::cout << "All validations passed!" << std::endl;
+  }
+
+  REQUIRE(result.is_valid == true);
+}
+
+TEST_CASE("validation-custom1-test", "[validator][normal-case]") {
+  using NvValidator = nvm::validators::NvValidator;
+  using ValidationOperator = nvm::validators::ValidationOperator;
+  using ValidationResult = nvm::validators::ValidationResult;
+
+  NvValidator validator;
+
+  auto balance1 = Balance("90979", 37000);
+  auto balance2 = Balance("90979", 98000);
+
+  validator.Validate<Balance>("custom", balance1, true)
+      .IsMust([&balance2](const Balance& b) noexcept {
+        return b.GetBalance() < balance2.GetBalance();
+      });
 
   const ValidationResult& result = validator.ValidateAll();
   if (!result.is_valid) {
