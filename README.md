@@ -9,27 +9,27 @@ Fluent SQL builder, Fluent Validator, Tuple and Object Mapper, DateTime and util
 [License](#license-top)<br/>
 
 > [!WARNING]
-> main branch : v0.3.x and upward is not backward compability with v0.2.x.<br/>
-> please find v0.2.x on branch v0.2.1-dev 
+> main branch : ```v0.3.x``` and upward is not backward compability with ```v0.2.x```.<br/>
+> please find ```v0.2.x``` on branch ```v0.2.1-dev``` 
 
 > [!WARNING]
 > v0.3.x lib name ```nvcore```<br/>
 > v0.2.x lib name ```nvm-core``` 
 
 ## NvCore Library Components
-1. NvSQL: Fluent Generic SQL Builder, SQL Criteria Builder ( Select, Insert, Update, Delete with DB driver-agnostic design -- Currently only support postgres SQL dialect.
-2. NvValidator: Contexable Fluent Validator.
-3. Tuple and struct mapper.
-4. Binary packer & unpacker.
-5. Easy to use & intuitive DateTime with Timezone class.
-6. Types utility
-7. Flags macro to enable quick enum class to become flags enum.
-8. Floating point Approximation and epsilon.
-9. All the swiss army utils for higher productivity.
+1. <b>NvSQL</b>: Fluent Generic SQL Builder, SQL Criteria Builder ( Select, Insert, Update, Delete with DB driver-agnostic design -- Currently only support postgres SQL dialect.
+2. <b>NvValidator</b>: Contexable Fluent Validator.
+3. <b>Tuple and struct mapper.</b>
+4. <b>Binary packer & unpacker.</b>
+5. <b>Easy to use & intuitive ```Nv DateTime``` with Timezone class.</b>
+6. <b>Types utility</b>
+7. <b>Macro to enable quick enum class to become flags enum.</b>
+8. <b>Floating point == using Epsilon Approximation.</b>
+9. <b>All the swiss army utils for higher productivity.</b>
 
 Designed with header only lib and 
-deps only to utf8-cpp and Howard Hinnant date static import
-for handling Utf8String and DateTime with timezone.
+deps only to ```utf8-cpp``` and ```Howard Hinnant date``` static import<br/>
+for handling ```Utf8String``` and ```DateTime``` with timezone.
 
 NvCore mission is focusing for faster development, eliminates silly mistakes and higher productivity 
 in area of generic SQL Builder, SQL Criteria Builder, SQL Sorting, 
@@ -47,11 +47,11 @@ NvSQL is a DB Driver-Agnostic fluent sql builder which is mean no coupled to cer
 The library have ParameterParser template specialization approach to convert std::vector&lt;DbSupportedParameterType&gt;<br/> 
 to other parameter values datatype that has specific implementations.<br/>
 
-## NvSQL Builder Components
-1. NvSelect: Fluent SQL SELECT Builder with support of Select, From or From with subquery, Join, Where, Group By and Order By.
-2. NvInsert: Fluent SQL INSERT [Warning: WIP & BREAKING CHANGES!]
-3. NvUpdate: Fluent SQL INSERT [Warning: WIP & BREAKING CHANGES!]  
-4. NvDelete: Fluent SQL INSERT [Warning: WIP & BREAKING CHANGES!]  
+### <u>NvSQL Builder Components</u>
+1. <b>NvSelect</b>: Fluent SQL SELECT Builder with support of Select, From or From with subquery, Join, Where, Group By and Order By.
+2. <b>NvInsert</b>: Fluent SQL INSERT [Warning: WIP & BREAKING CHANGES!]
+3. <b>NvUpdate</b>: Fluent SQL INSERT [Warning: WIP & BREAKING CHANGES!]  
+4. <b>NvDelete</b>: Fluent SQL INSERT [Warning: WIP & BREAKING CHANGES!]  
    
 ><b>Notes:</b> <br/>
 >Currently only supported PostgreSQL dialect. <br/>
@@ -71,30 +71,42 @@ Complete examples located on ```tests/nvm``` folder.
 
 ## NvSelect
 
-NvSelect is a fluent SQL Select Builder that is DB Driver-agnostic that is not coupled to any specific DB driver implementations.<br/>
+```NvSelect``` is a fluent SQL ```SELECT``` Builder <br/>
+that is DB Driver-agnostic and not coupled to any specific DB driver implementations.<br/>
 
 ```cxx
 // Instancing NvSelect with start parameter from 1
 auto select = std::make_unique<NvSelect>(1);
 ```
-Field and Function Call Usage
+<u>Field and Function Call Usage</u>
 ```cxx
 (*select)
   // Use the Field<T> method if you need to generate row tuples
   .Field<int32_t>("equipment_id","e") 
 
   // Use the Field method if you don't need to generate row tuples
-  .Field("equipment_id","e")
+  .F("equipment_id","e")
 
   // Function call 
   // Send parameters as vector<std::string>
   // alias the output AS Brand column
-  // For advance parameterized values still in WIP.  
+  // For advance nested parameterized values still in WIP.  
   .Fn("UPPER",{"e.Brand"},"Brand")
+
+  // TO_CHAR(e.entry_date,'DD-MON-YYYY')
+  .Fn<std::string>("TO_CHAR", "%s %v",{date_format},{"e.entry_date"}, "entry_date")
+
+  // TO_CHAR(e.termination_date,'DD-MON-YYYY') if you don't need to generate row tuples
+  .Fn("TO_CHAR", "%s %v",{date_format},{"e.termination_date"}, "termination_date")
  
 ```
+> <b>Notes:</b><br/>
+> - Switch Case: Not yet supported<br/>
+> - Advance nested function call static &amp; parameterized values: WIP<br/>
+> - Subquery in field: Not yet supported
 
-FROM Statement Block Usage
+
+<u>FROM Statement Block Usage</u>
 ```cxx
 (*select)
   // FROM STATEMENT BLOCK
@@ -208,9 +220,13 @@ std::cout << parser.GetAllParameterValuesAsString() << std::endl;
 ### NvSelect Output
 
 A. Parameter Values Output<br/>
-```cxx
-using ParameterParser =
-      nvm::sqlbuilder::PostgresDefaultParameterParser<DefaultPostgresParamType>;
+```
+ PARAMETER VALUES:
+ DD-MON-YYYY
+ DD-MON-YYYY
+ HMT
+ HLB
+ RS
 ```
 
 B. Sql query string<br/>
@@ -363,19 +379,19 @@ std::cout << "\nPARAMETER VALUES:" << std::endl;
 std::cout << parser.GetAllParameterValuesAsString() << std::endl;
 
 // simulate to convert from parameters type to other parameter types
-auto parameters_specific_db_driver = Parse<DefaultPostgresParamType>();
+auto parameters_specific_db_driver = parser.Parse<DefaultPostgresParamType>();
   
 ```
 
-> <b>How To Convert or Transform Parameter Values  std::vector&lt;TParameterType&gt; <br/>For Specific DB Driver Implementations.</b><br/>
->
-> <u>Take PQXX as an Example.</u><br/>
->
-> PQXX expected different datatype for parameter values when executed sql with parameter values.<br/>
-> You have to ```Create Template Specialization from ParameterParser<TParameterType>```<br/> 
-> to transform into PQXX expected parameter values datatype.<br/>
->
->Check above template specialization of ```PostgresDefaultParameterParser<DefaultPostgresParamType>``` <br/>above as guideline
+### <b>How To Convert or Transform Parameter Values  std::vector&lt;TParameterType&gt; <br/>For Specific DB Driver Implementations.</b>
+
+<u>Take PQXX as an Example.</u><br/>
+
+PQXX expected different datatype for parameter values when executed sql with parameter values.<br/>
+You have to ```Create Template Specialization from ParameterParser<TParameterType>```<br/> 
+to transform into PQXX expected parameter values datatype.<br/>
+
+Check above template specialization of ```PostgresDefaultParameterParser<DefaultPostgresParamType>``` <br/>above as guideline
 
 
 
