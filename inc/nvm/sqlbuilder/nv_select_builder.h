@@ -654,9 +654,10 @@ class FieldDef {
 
     size_t index_params = 0;
     uint32_t param_index = uint32_t(current_param_index);
+    size_t size_params = parameter_values.size();
 
     for (char ch : parameter_format) {
-      if (ch == 'v') {
+      if (index_params < size_params && ch == 'v') {
         parameter_values_->push_back(fn_values_.at(index_params));
         param_index += 1;
         index_params += 1;
@@ -702,20 +703,23 @@ class FieldDef {
     uint32_t param_index = start_parameter_index_;
     size_t index_params = 0;
     size_t index_statics = 0;
+    size_t size_params = fn_values_.size();
+    size_t size_statics = static_param_values_.size();
     bool is_first_element = true;
     std::ostringstream fn_call;
 
     fn_call << function_name_ << "(";
     for (char ch : parameter_format_) {
-      if (ch == 's' || ch == 'v') {
+      if ((index_statics < size_statics || index_params < size_params) &&
+          (ch == 's' || ch == 'v')) {
         fn_call << (is_first_element ? "" : ", ");
       }
 
-      if (ch == 's') {
+      if (ch == 's' && index_statics < size_statics) {
         fn_call << static_param_values_[index_statics];
         index_statics += 1;
         is_first_element = false;
-      } else if (ch == 'v') {
+      } else if (ch == 'v' && index_params < size_params) {
         fn_call << "$" << param_index;
         param_index += 1;
         index_params += 1;
