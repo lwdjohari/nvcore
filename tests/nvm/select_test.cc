@@ -7,16 +7,18 @@
 #include "nvm/strings/utility.h"
 using namespace nvm;
 
-TEST_CASE("select-join-complex-1", "[validator][normal-case]") {
+TEST_CASE("select-oracle-join-complex", "[validator][normal-case]") {
   // using Validator = nvm::sqlbuilder::validations::Validator;
-  using DefaultPostgresParamType = nvm::sqlbuilder::DefaultPostgresParamType;
-  using NvSelect = nvm::sqlbuilder::NvSelect<DefaultPostgresParamType>;
+  using OracleParamType = nvm::sqlbuilder::DefaultOracleParamType;
+  using NvSelect = nvm::sqlbuilder::NvSelect<OracleParamType>;
   using SqlOperator = nvm::sqlbuilder::SqlOperator;
   using RecordKey = nvm::sqlbuilder::RecordKey;
   using SqlAggregateFn = nvm::sqlbuilder::SqlAggregateFunction;
   using ParameterParser =
-      nvm::sqlbuilder::PostgresDefaultParameterParser<DefaultPostgresParamType>;
-  auto select = std::make_unique<NvSelect>(1);
+      nvm::sqlbuilder::PostgresDefaultParameterParser<OracleParamType>;
+  using Dialect = nvm::sqlbuilder::DatabaseDialect;
+
+  auto select = std::make_unique<NvSelect>(Dialect::Oracle);
 
   // clang-format off
   std::cout << "NvSelect size:" << sizeof(*select) << std::endl;
@@ -253,7 +255,9 @@ TEST_CASE("select-test-complex-2", "[validator][normal-case]") {
             .AddTable("vendor")
           .EndFromTableBlock()
           .Where()
+            .AddConditionBetween<int32_t>("e.status",0,1)
             .AddConditionIn<std::string>("vendor_code",{"MP","GP","SC"})
+            .AddConditionBetween<int32_t>("e.status",0,1)
           .EndWhereBlock()
         .EndSubqueryInsideWhereCondition()
       .EndWhereBlock()

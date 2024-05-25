@@ -59,6 +59,7 @@ class Condition {
   LogicOperator logic_operator_;
   ConditionMode mode_;
   std::string table_alias_;
+  DatabaseDialect dialect_;
 
   uint32_t Process(uint32_t start_index) {
     uint32_t index = start_index;
@@ -78,7 +79,7 @@ class Condition {
 
  public:
   Condition(std::string field_name, SqlOperator op, uint32_t value_size,
-            uint32_t param_index, uint32_t level)
+            uint32_t param_index, uint32_t level, DatabaseDialect dialect)
                   : field_name_(std::move(field_name)),
                     values_(nullptr),
                     where_subquery_parent_(nullptr),
@@ -90,9 +91,11 @@ class Condition {
                     level_(level),
                     logic_operator_(),
                     mode_(ConditionMode::Comparator),
-                    table_alias_() {}
+                    table_alias_(),
+                    dialect_(dialect) {}
 
-  Condition(LogicOperator op, ConditionMode mode, uint32_t level)
+  Condition(LogicOperator op, ConditionMode mode, uint32_t level,
+            DatabaseDialect dialect)
                   : field_name_(),
                     values_(nullptr),
                     where_subquery_parent_(nullptr),
@@ -104,7 +107,8 @@ class Condition {
                     level_(level),
                     logic_operator_(op),
                     mode_(mode),
-                    table_alias_() {}
+                    table_alias_(),
+                    dialect_(dialect) {}
 
   /// @brief Do not use this directly only inner code to instancing if Where
   /// subquery requested
@@ -119,12 +123,13 @@ class Condition {
   Condition(std::shared_ptr<std::vector<TParameterType>> parameter_values,
             WhereStatement<TParameterType>* parent,
             const std::string& field_name, const std::string& subquery_name,
-            SqlOperator op, uint32_t param_index, uint32_t level)
+            SqlOperator op, uint32_t param_index, uint32_t level,
+            DatabaseDialect dialect)
                   : field_name_(std::move(field_name)),
                     where_subquery_parent_(parent),
                     subquery_(std::make_shared<NvSelect<TParameterType>>(
                         parameter_values, parent, param_index, level + 1,
-                        subquery_name)),
+                        subquery_name, dialect)),
                     operation(op),
                     value_size_(),
                     start_index_(),
@@ -132,7 +137,8 @@ class Condition {
                     level_(level),
                     logic_operator_(),
                     mode_(ConditionMode::Subquery),
-                    table_alias_(subquery_name) {}
+                    table_alias_(subquery_name),
+                    dialect_(dialect) {}
 
   // explicit NvSelect(std::shared_ptr<std::vector<TParameterType>> values,
   //                   uint32_t current_param_index, uint32_t level,
@@ -175,16 +181,20 @@ class Condition {
       ss << (pretty_print ? "\n" + GenerateIndentation(level_) : "")
          << field_name_ << " " << SqlOperatorToString(operation) << " ";
       if (operation == SqlOperator::kBetween && value_size_ == 2) {
-        ss << "$" << index << " AND $" << (index + 1);
-        // index += 2;
+        ss << DetermineParameterFormat(dialect_, index) << " AND "
+           << DetermineParameterFormat(dialect_, index + 1);
+        index += 2;
       } else if (operation == SqlOperator::kIn) {
-        ss << "($";
+        ss << "(";
         for (size_t i = 0; i < value_size_; ++i) {
-          ss << index++ << (i < value_size_ - 1 ? ", $" : "");
+          ss << DetermineParameterFormat(dialect_, index)
+             << (i < value_size_ - 1 && value_size_ > 1 ? ", " : "");
+          index++;
         }
         ss << ")";
       } else {
-        ss << "$" << index++;
+        ss << DetermineParameterFormat(dialect_, index);
+        index++;
       }
     } else if (mode_ == ConditionMode::EndGroup) {
       ss << ")";
@@ -202,24 +212,27 @@ class WhereStatement {
   std::vector<Condition<TParameterType>> conditions_;
   uint32_t level_;
   uint32_t current_param_index_;
+  DatabaseDialect dialect_;
 
  public:
-  WhereStatement()
+  explicit WhereStatement(DatabaseDialect dialect = DatabaseDialect::PostgreSQL)
                   : parent_(nullptr),
                     values_(std::make_shared<std::vector<TParameterType>>()),
                     conditions_(),
                     level_(),
-                    current_param_index_(1) {}
+                    current_param_index_(1),
+                    dialect_(dialect) {}
 
   explicit WhereStatement(
       std::shared_ptr<std::vector<TParameterType>> parameter_values,
       NvSelect<TParameterType>* parent, uint32_t current_param_index,
-      uint32_t level)
+      uint32_t level, DatabaseDialect dialect)
                   : parent_(parent),
                     values_(parameter_values),
                     conditions_(),
                     level_(level),
-                    current_param_index_(current_param_index) {}
+                    current_param_index_(current_param_index),
+                    dialect_(dialect) {}
   ~WhereStatement() {}
 
   void UpdateCurrentParameterIndex(uint32_t parameter_index) {
@@ -260,7 +273,7 @@ class WhereStatement {
                                                SqlOperator op,
                                                const T& values) {
     conditions_.emplace_back(field_name, op, 1, current_param_index_,
-                             level_ + 1);
+                             level_ + 1, dialect_);
     const auto cond = conditions_.back();
     current_param_index_ = cond.NextParameterIndex();
     values_->push_back(values);
@@ -273,7 +286,7 @@ class WhereStatement {
     values_->push_back(value1);
     values_->push_back(value2);
     conditions_.emplace_back(field_name, SqlOperator::kBetween, 2,
-                             current_param_index_, level_ + 1);
+                             current_param_index_, level_ + 1, dialect_);
     const auto cond = conditions_.back();
     current_param_index_ = cond.NextParameterIndex();
     return *this;
@@ -283,7 +296,7 @@ class WhereStatement {
   WhereStatement<TParameterType>& AddConditionIn(const std::string& field_name,
                                                  const std::vector<T>& values) {
     conditions_.emplace_back(field_name, SqlOperator::kIn, values.size(),
-                             current_param_index_, level_ + 1);
+                             current_param_index_, level_ + 1, dialect_);
     const auto cond = conditions_.back();
     current_param_index_ = cond.NextParameterIndex();
     for (auto& value : values) {
@@ -295,25 +308,25 @@ class WhereStatement {
 
   WhereStatement<TParameterType>& And() {
     conditions_.emplace_back(LogicOperator::kAnd,
-                             ConditionMode::LogicalOperator, level_);
+                             ConditionMode::LogicalOperator, level_, dialect_);
     return *this;
   }
 
   WhereStatement<TParameterType>& Or() {
     conditions_.emplace_back(LogicOperator::kOr, ConditionMode::LogicalOperator,
-                             level_);
+                             level_, dialect_);
     return *this;
   }
 
   WhereStatement<TParameterType>& StartGroup() {
     conditions_.emplace_back(LogicOperator::kOr, ConditionMode::StartGroup,
-                             level_);
+                             level_, dialect_);
     return *this;
   }
 
   WhereStatement<TParameterType>& EndGroup() {
     conditions_.emplace_back(LogicOperator::kOr, ConditionMode::EndGroup,
-                             level_);
+                             level_, dialect_);
     return *this;
   }
 
@@ -326,8 +339,8 @@ class WhereStatement {
     //         const std::string& subquery_name, uint32_t param_index,
     //         uint32_t level)
     conditions_.emplace_back(values_, this, field_name, subquery_name, op,
-                             current_param_index_, level_ + 1);
+                             current_param_index_, level_ + 1, dialect_);
     return conditions_.back().Subquery();
   }
 };
-}  // namespace nvm::containers
+}  // namespace nvm::sqlbuilder

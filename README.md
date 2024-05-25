@@ -17,8 +17,8 @@ Fluent SQL builder, Fluent Validator, Tuple and Object Mapper, DateTime and util
 > v0.2.x lib name ```nvm-core``` 
 
 ## NvCore Library Components
-1. <b>NvSQL</b>: Fluent Generic SQL Builder, SQL Criteria Builder ( Select, Insert, Update, Delete with DB driver-agnostic design -- Currently only support postgres SQL dialect.
-2. <b>NvValidator</b>: Contexable Fluent Validator.
+1. <b>NvSQL</b>: Fluent generic type-safe parameterized SQL Builder w/ multi-dialect support (```SELECT```, ```INSERT```, ```UPDATE```, ```DELETE```) with DB driver-agnostic design.
+2. <b>NvValidator</b>: Type-safe Contexable Fluent Validator.
 3. <b>Tuple and struct mapper.</b>
 4. <b>Binary packer & unpacker.</b>
 5. <b>Easy to use & intuitive ```Nv DateTime``` with Timezone class.</b>
@@ -53,9 +53,12 @@ to other parameter values datatype that has specific implementations.<br/>
 3. <b>NvUpdate</b>: Fluent SQL INSERT [Warning: WIP & BREAKING CHANGES!]  
 4. <b>NvDelete</b>: Fluent SQL INSERT [Warning: WIP & BREAKING CHANGES!]  
    
-><b>Notes:</b> <br/>
->Currently only supported PostgreSQL dialect. <br/>
->WIP to supported other database dialects.<br/>
+### <u>Database Dialect Support</u>
+- <b>PostgreSQL</b> : using $1 ... $n as parameter index.
+- <b>Oracle</b> : using :1 ... :n as parameter index.
+- <b>Mysql/MariaDB</b> : Plan to support.
+- <b>Sqlite</b> : Plan to support.
+- <b>SQL Server</b> : Due to named parameter, still no plan to support. 
 
 Complete examples located on ```tests/nvm``` folder.
 
@@ -138,6 +141,7 @@ using ParameterParser =
 
 // Parameter values
 std::string service_code("RS");
+std::string date_format = "DD-MON-YYYY";
 auto equipment_types = std::vector<std::string>({"HMT", "HLB"});
 
 // Instancing NvSelect with start parameter from 1
@@ -154,7 +158,11 @@ auto select = std::make_unique<NvSelect>(1);
   .Field<int32_t>("unit_subclass_id","e")
   .Field<std::string>("reg_id","e")
   .Field<std::string>("code","e", "equipment_code")
-  .Field<std::string>("name","c","company_name")
+  Fn<std::string>("UPPER",{"c.name"},"company_name")
+  // TO_CHAR(e.entry_date,'DD-MON-YYYY')
+  .Fn<std::string>("TO_CHAR", "%s %v",{date_format},{"e.entry_date"}, "entry_date")
+  // TO_CHAR(e.termination_date,'DD-MON-YYYY')
+  .Fn<std::string>("TO_CHAR", "%s %v",{date_format},{"e.termination_date"}, "termination_date")
   .Field<std::string>("name","s","service_name")
   .Field<std::string>("code","ut","unit_type_code")
   .Field<std::string>("name","ut","unit_type_name")
@@ -242,7 +250,9 @@ SELECT
   e.unit_subclass_id,
   e.reg_id,
   e.code AS equipment_code,
-  c.name AS company_name,
+  UPPER(c.name) AS company_name,
+  TO_CHAR(e.entry_date, $1) AS entry_date,
+  TO_CHAR(e.termination_date, $2) AS termination_date,
   s.name AS service_name,
   ut.code AS unit_type_code,
   ut.name AS unit_type_name,
@@ -289,8 +299,8 @@ INNER JOIN
   ON
     e.equipment_id = ad.equipment_id
 WHERE
-  unit_type_code IN ($1, $2) AND
-  s.service_code = $3
+  unit_type_code IN ($3, $4) AND
+  s.service_code = $5
 ORDER BY
   company_name ASC, service_name ASC, unit_type_code ASC, unit_type_class_code ASC
 

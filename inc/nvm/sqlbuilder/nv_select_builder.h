@@ -67,7 +67,7 @@ template <typename TParameterType = DefaultPostgresParamType>
 class JoinDef {
  public:
   JoinDef(RecordKey&& left_table, RecordKey&& right_table, SqlJoinType join,
-          uint32_t level)
+          uint32_t level, DatabaseDialect dialect)
                   : subquery_str_(),
                     subsquery_str_alias_(),
                     subquery_field_key_(),
@@ -76,12 +76,13 @@ class JoinDef {
                     right_table_(std::forward<RecordKey>(right_table)),
                     join_type_(join),
                     join_mode_(JoinDefMode::RecordKeyBoth),
-                    level_(level) {}
+                    level_(level),
+                    dialect_(dialect) {}
 
   JoinDef(RecordKey&& left_table, SqlJoinType join, const std::string& subquery,
           const std::string& subquery_field_key,
           const std::string& subquery_table_alias, SqlOperator op,
-          uint32_t level)
+          uint32_t level, DatabaseDialect dialect)
                   : subquery_str_(std::string(subquery)),
                     subsquery_str_alias_(std::string(subquery_table_alias)),
                     subquery_field_key_(std::string(subquery_field_key)),
@@ -90,10 +91,11 @@ class JoinDef {
                     right_table_(RecordKey()),
                     join_type_(join),
                     join_mode_(JoinDefMode::SubquerySelectString),
-                    level_(level) {}
+                    level_(level),
+                    dialect_(dialect) {}
 
   JoinDef(RecordKey&& existing_table, NvSelect<TParameterType>&& subquery,
-          SqlJoinType join, uint32_t level)
+          SqlJoinType join, uint32_t level, DatabaseDialect dialect)
                   : subquery_str_(),
                     subsquery_str_alias_(),
                     subquery_field_key_(),
@@ -103,7 +105,8 @@ class JoinDef {
                     right_table_(RecordKey()),
                     join_type_(join),
                     join_mode_(JoinDefMode::SubquerySelectObject),
-                    level_(level) {}
+                    level_(level),
+                    dialect_(dialect) {}
 
   SqlJoinType JoinType() const {
     return join_type_;
@@ -166,6 +169,7 @@ class JoinDef {
   JoinDefMode join_mode_;
   SqlOperator sql_operator_;
   uint32_t level_;
+  DatabaseDialect dialect_;
 
   std::string GenerateJoinRecordBoth(bool pretty_print) const {
     if (join_type_ == SqlJoinType::InnerJoin) {
@@ -322,15 +326,18 @@ class JoinStatement {
   // std::unique_ptr<NvSelect<TParameterType>> subquery_;
   uint32_t current_parameter_index_;
   uint32_t level_;
+  DatabaseDialect dialect_;
 
  public:
   explicit JoinStatement(NvSelect<TParameterType>& parent,
-                         uint32_t parameter_index, uint32_t level)
+                         uint32_t parameter_index, uint32_t level,
+                         DatabaseDialect dialect)
                   : parent_(parent),
                     joins_(),
                     // subquery_(nullptr),
                     current_parameter_index_(parameter_index),
-                    level_(level) {}
+                    level_(level),
+                    dialect_(dialect) {}
 
   NvSelect<TParameterType>& EndJoinBlock() {
     // sync the current_parameter
@@ -367,7 +374,7 @@ class JoinStatement {
   JoinStatement& LeftJoin(RecordKey&& left_table, RecordKey&& right_table) {
     joins_.emplace_back(std::forward<RecordKey>(left_table),
                         std::forward<RecordKey>(right_table),
-                        SqlJoinType::LeftJoin, level_);
+                        SqlJoinType::LeftJoin, level_, dialect_);
     return *this;
   }
 
@@ -392,7 +399,7 @@ class JoinStatement {
 
     joins_.emplace_back(std::forward<RecordKey>(right_table),
                         SqlJoinType::LeftJoin, left_table, left_table_field_key,
-                        left_table_alias, op, level_);
+                        left_table_alias, op, level_, dialect_);
     return *this;
   }
 
@@ -426,9 +433,9 @@ class JoinStatement {
     //       const std::optional<std::string>& subquery_table_alias,
     //       SqlOperator op = SqlOperator::kEqual
 
-    joins_.emplace_back(std::forward<RecordKey>(left_table),
-                        SqlJoinType::LeftJoin, right_table,
-                        right_table_field_key, right_table_alias, op, level_);
+    joins_.emplace_back(
+        std::forward<RecordKey>(left_table), SqlJoinType::LeftJoin, right_table,
+        right_table_field_key, right_table_alias, op, level_, dialect_);
 
     return *this;
   }
@@ -441,7 +448,7 @@ class JoinStatement {
                            RecordKey&& join_on_table) {
     joins_.emplace_back(std::forward<RecordKey>(existing_select),
                         std::forward<RecordKey>(join_on_table),
-                        SqlJoinType::InnerJoin, level_);
+                        SqlJoinType::InnerJoin, level_, dialect_);
     return *this;
   }
 
@@ -466,7 +473,8 @@ class JoinStatement {
 
     joins_.emplace_back(std::forward<RecordKey>(existing_select),
                         SqlJoinType::LeftJoin, join_on_table,
-                        join_table_field_key, join_table_alias, op, level_);
+                        join_table_field_key, join_table_alias, op, level_,
+                        dialect_);
     return *this;
   }
 
@@ -505,6 +513,7 @@ class FromTableStatement {
   std::shared_ptr<std::vector<TParameterType>> parameter_values_;
   uint32_t level_;
   uint32_t current_parameter_index_;
+  DatabaseDialect dialect_;
 
   std::string __GetTableAliasFromParent(
       const NvSelect<TParameterType>& select) const;
@@ -523,13 +532,14 @@ class FromTableStatement {
   explicit FromTableStatement(
       std::shared_ptr<std::vector<TParameterType>> values,
       NvSelect<TParameterType>* parent, uint32_t parameter_index,
-      uint32_t level)
+      uint32_t level, DatabaseDialect dialect)
                   : parent_(parent),
                     tables_(),
                     parameter_values_(values),
                     subqueries_(),
                     level_(uint32_t(level)),
-                    current_parameter_index_(parameter_index) {}
+                    current_parameter_index_(parameter_index),
+                    dialect_(dialect) {}
 
   ~FromTableStatement() {}
 
@@ -548,7 +558,7 @@ class FromTableStatement {
   FromTableStatement& AddTable(
       const std::string& table_name,
       const std::optional<std::string>& table_alias = std::nullopt) {
-    tables_.emplace_back(FromTable(table_name, table_alias));
+    tables_.emplace_back(table_name, table_alias);
     return *this;
   }
 
@@ -643,6 +653,7 @@ class FieldDef {
   uint32_t current_parameter_index_;
   uint32_t level_;
   FieldDefMode mode_;
+  DatabaseDialect dialect_;
 
   uint32_t ProcessFunctionParameterIndex(
       const int32_t& current_param_index, const std::string& parameter_format,
@@ -720,7 +731,7 @@ class FieldDef {
         index_statics += 1;
         is_first_element = false;
       } else if (ch == 'v' && index_params < size_params) {
-        fn_call << "$" << param_index;
+        fn_call << DetermineParameterFormat(dialect_, param_index);
         param_index += 1;
         index_params += 1;
         is_first_element = false;
@@ -757,7 +768,7 @@ class FieldDef {
   /// @param level
   /// @param mode
   explicit FieldDef(
-      const std::string& field,
+      DatabaseDialect dialect, const std::string& field,
       const std::optional<std::string>& table_alias = std::nullopt,
       bool enclose_field_name = false,
       SqlAggregateFunction aggregate_fn = SqlAggregateFunction::None,
@@ -776,14 +787,15 @@ class FieldDef {
                     start_parameter_index_(),
                     current_parameter_index_(),
                     level_(level),
-                    mode_(mode) {}
+                    mode_(mode),
+                    dialect_(dialect) {}
 
   /// @brief Function call static definitions
   /// @param function_name
   /// @param static_param_values
   /// @param level
   /// @param alias
-  explicit FieldDef(const std::string& function_name,
+  explicit FieldDef(DatabaseDialect dialect, const std::string& function_name,
                     const std::vector<std::string>& static_param_values,
                     uint32_t level,
                     const std::optional<std::string>& alias = std::nullopt)
@@ -800,7 +812,8 @@ class FieldDef {
                     start_parameter_index_(),
                     current_parameter_index_(),
                     level_(level),
-                    mode_(FieldDefMode::FnStaticParameter) {}
+                    mode_(FieldDefMode::FnStaticParameter),
+                    dialect_(dialect) {}
 
   /// @brief Function call for parameterized parameters definitions
   /// @param function_name
@@ -811,7 +824,8 @@ class FieldDef {
   /// @param level
   /// @param alias
   explicit FieldDef(
-      const std::string& function_name, const std::string& parameter_format,
+      DatabaseDialect dialect, const std::string& function_name,
+      const std::string& parameter_format,
       std::shared_ptr<std::vector<TParameterType>> parameter_values,
       const std::vector<TParameterType>& fn_param_values,
       const std::vector<std::string>& static_param_values, uint32_t param_index,
@@ -831,7 +845,8 @@ class FieldDef {
                         param_index, parameter_format, fn_values_,
                         static_param_values_)),
                     level_(level),
-                    mode_(FieldDefMode::FnParameterizedValues) {}
+                    mode_(FieldDefMode::FnParameterizedValues),
+                    dialect_(dialect) {}
 
   FieldDefMode Mode() const {
     return mode_;
@@ -928,10 +943,11 @@ class NvSelect final {
   std::shared_ptr<OrderByStatement<TParameterType>> order_by_;
   std::shared_ptr<GroupByStatement<TParameterType>> group_by_;
   WhereStatement<TParameterType>* subquery_where_parent_;
+  DatabaseDialect dialect_;
 
  public:
   /// @brief Construct NvSelect with parameter index start from 1.
-  NvSelect()
+  explicit NvSelect(DatabaseDialect dialect = DatabaseDialect::PostgreSQL)
                   : current_param_index_(1),
                     level_(0),
                     join_blocks_(),
@@ -944,12 +960,14 @@ class NvSelect final {
                     where_(nullptr),
                     order_by_(nullptr),
                     group_by_(nullptr),
-                    subquery_where_parent_(nullptr) {}
+                    subquery_where_parent_(nullptr),
+                    dialect_(dialect) {}
 
   /// @brief Construct NvSelect with parameter as specified.
   /// @param current_param_index start of parameter index, must be 1 based for
   /// the start.
-  explicit NvSelect(uint32_t current_param_index)
+  explicit NvSelect(uint32_t current_param_index,
+                    DatabaseDialect dialect = DatabaseDialect::PostgreSQL)
                   : current_param_index_(current_param_index),
                     level_(0),
                     join_blocks_(),
@@ -962,13 +980,15 @@ class NvSelect final {
                     where_(nullptr),
                     order_by_(nullptr),
                     group_by_(nullptr),
-                    subquery_where_parent_(nullptr) {}
+                    subquery_where_parent_(nullptr),
+                    dialect_(dialect) {}
 
   /// @brief DO NOT USE THIS DIRECTLY, SUBQUERY USE THIS CONST
   /// @param current_param_index
   /// @param level
   explicit NvSelect(std::shared_ptr<std::vector<TParameterType>> values,
-                    uint32_t current_param_index, uint32_t level)
+                    uint32_t current_param_index, uint32_t level,
+                    DatabaseDialect dialect)
                   : current_param_index_(current_param_index),
                     level_(level),
                     join_blocks_(),
@@ -980,7 +1000,8 @@ class NvSelect final {
                     where_(nullptr),
                     order_by_(nullptr),
                     group_by_(nullptr),
-                    subquery_where_parent_(nullptr) {}
+                    subquery_where_parent_(nullptr),
+                    dialect_(dialect) {}
 
   /// @brief DO NOT USE DIRECTLY, SUBQUERY FROM NESTED FROM STATEMENT USE THIS
   /// CONST
@@ -991,7 +1012,7 @@ class NvSelect final {
   explicit NvSelect(std::shared_ptr<std::vector<TParameterType>> values,
                     uint32_t current_param_index, uint32_t level,
                     FromTableStatement<TParameterType>* from_obj,
-                    const std::string& table_alias)
+                    const std::string& table_alias, DatabaseDialect dialect)
                   : current_param_index_(current_param_index),
                     level_(level),
                     join_blocks_(),
@@ -1003,7 +1024,8 @@ class NvSelect final {
                     where_(nullptr),
                     order_by_(nullptr),
                     group_by_(nullptr),
-                    subquery_where_parent_(nullptr) {}
+                    subquery_where_parent_(nullptr),
+                    dialect_(dialect) {}
 
   /// @brief DO NOT USE DIRECTLY, SUBQUERY FROM NESTED WHERE STATEMENT USE
   /// THIS CONST
@@ -1014,7 +1036,7 @@ class NvSelect final {
   explicit NvSelect(std::shared_ptr<std::vector<TParameterType>> values,
                     WhereStatement<TParameterType>* where_obj,
                     uint32_t current_param_index, uint32_t level,
-                    const std::string& table_alias)
+                    const std::string& table_alias, DatabaseDialect dialect)
                   : current_param_index_(current_param_index),
                     level_(level),
                     join_blocks_(),
@@ -1026,9 +1048,14 @@ class NvSelect final {
                     where_(nullptr),
                     order_by_(nullptr),
                     group_by_(nullptr),
-                    subquery_where_parent_(where_obj) {}
+                    subquery_where_parent_(where_obj),
+                    dialect_(dialect) {}
 
   ~NvSelect() {}
+
+  DatabaseDialect Dialect() const {
+    return dialect_;
+  }
 
   uint32_t GetCurrentParamIndex() const {
     return current_param_index_;
@@ -1108,8 +1135,9 @@ class NvSelect final {
                   const std::optional<std::string>& table_alias,
                   const std::optional<std::string>& field_alias,
                   SqlAggregateFunction aggregate_fn, bool enclose_field_name) {
-    fields_.emplace_back(field, table_alias, enclose_field_name, aggregate_fn,
-                         field_alias, level_, FieldDefMode::FieldWType);
+    fields_.emplace_back(dialect_, field, table_alias, enclose_field_name,
+                         aggregate_fn, field_alias, level_,
+                         FieldDefMode::FieldWType);
     return *this;
   }
 
@@ -1177,8 +1205,9 @@ class NvSelect final {
               const std::optional<std::string>& table_alias,
               const std::optional<std::string>& field_alias,
               SqlAggregateFunction aggregate_fn, bool enclose_field_name) {
-    fields_.emplace_back(field, table_alias, enclose_field_name, aggregate_fn,
-                         field_alias, level_, FieldDefMode::FieldRaw);
+    fields_.emplace_back(dialect_, field, table_alias, enclose_field_name,
+                         aggregate_fn, field_alias, level_,
+                         FieldDefMode::FieldRaw);
     return *this;
   }
 
@@ -1227,7 +1256,7 @@ class NvSelect final {
         //             current_parameter_index_(parameter_index) {}
 
         from_table_ = std::make_shared<FromTableStatement<TParameterType>>(
-            parameter_values_, this, current_param_index_, level_);
+            parameter_values_, this, current_param_index_, level_, dialect_);
       }
 
       // if (from_table_->GetCurrentParameterIndex() != current_param_index_)
@@ -1257,7 +1286,7 @@ class NvSelect final {
 
     if (!where_) {
       where_ = std::make_shared<WhereStatement<TParameterType>>(
-          parameter_values_, this, current_param_index_, level_);
+          parameter_values_, this, current_param_index_, level_, dialect_);
       // std::cout << "Where INIT:" << current_param_index_ <<std::endl;
     }
 
@@ -1278,7 +1307,7 @@ class NvSelect final {
   /// @return
   JoinStatement<TParameterType>& Join() {
     try {
-      join_blocks_.emplace_back(*this, current_param_index_, level_);
+      join_blocks_.emplace_back(*this, current_param_index_, level_, dialect_);
       return join_blocks_.back();
     } catch (const std::exception& e) {
       std::cout << "Create JOINBLOCK_FAILED [" << level_ << "]: " << e.what()
@@ -1362,8 +1391,8 @@ class NvSelect final {
     // param_index, uint32_t level, const std::optional<std::string>& alias =
     // std::nullopt)
 
-    fields_.emplace_back(fn_name, parameter_list_format, parameter_values_,
-                         param_values, static_param_values,
+    fields_.emplace_back(dialect_, fn_name, parameter_list_format,
+                         parameter_values_, param_values, static_param_values,
                          current_param_index_, level_, alias);
 
     // sync the current param index
@@ -1383,7 +1412,7 @@ class NvSelect final {
     //                   uint32_t level,
     //                   const std::optional<std::string>& alias = std::nullopt)
 
-    fields_.emplace_back(fn_name, param_values, level_, field_alias);
+    fields_.emplace_back(dialect_, fn_name, param_values, level_, field_alias);
 
     // No need to update current_parameter_index
     return *this;
@@ -1405,8 +1434,8 @@ class NvSelect final {
     // param_index, uint32_t level, const std::optional<std::string>& alias =
     // std::nullopt)
 
-    fields_.emplace_back(fn_name, parameter_list_format, parameter_values_,
-                         param_values, static_param_values,
+    fields_.emplace_back(dialect_, fn_name, parameter_list_format,
+                         parameter_values_, param_values, static_param_values,
                          current_param_index_, level_, alias);
 
     // sync the current param index
@@ -1529,7 +1558,8 @@ template <typename TParameterType>
 void FromTableStatement<TParameterType>::__CreateNewSelectBlock(
     std::vector<NvSelect<TParameterType>>& selects, uint32_t index,
     uint32_t level, const std::string& table_alias) {
-  selects.emplace_back(parameter_values_, index, level, this, table_alias);
+  selects.emplace_back(parameter_values_, index, level, this, table_alias,
+                       dialect_);
 }
 
 template <typename TParameterType>

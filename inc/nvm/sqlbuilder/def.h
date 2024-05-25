@@ -36,9 +36,26 @@
 
 namespace nvm::sqlbuilder {
 
+// Define DefaultPostgresParamType to support comprehensive PostgreSQL
+// data types
 using DefaultPostgresParamType =
     std::variant<int, long long, float, double, std::string, bool,
                  std::chrono::system_clock::time_point, std::vector<int>>;
+
+// Define DefaultOracleParamType to support comprehensive Oracle data types
+using DefaultOracleParamType = std::variant<
+    int,          // Oracle NUMBER, INTEGER
+    long long,    // Oracle NUMBER (large integer)
+    float,        // Oracle FLOAT
+    double,       // Oracle DOUBLE PRECISION
+    std::string,  // Oracle VARCHAR2, CHAR, CLOB, NCHAR, NVARCHAR2, NCLOB,
+                  // BFILE, XMLType, ROWID, UROWID
+    bool,         // Oracle BOOLEAN
+    std::chrono::system_clock::time_point,  // Oracle DATE, TIMESTAMP, TIMESTAMP
+                                            // WITH TIME ZONE, TIMESTAMP WITH
+                                            // LOCAL TIME ZONE
+    std::vector<unsigned char>              // Oracle RAW, BLOB
+    >;
 
 // using DefaultPostgresParamType =
 //     std::variant<int, long long, float, double, std::string, bool,
@@ -47,6 +64,11 @@ using DefaultPostgresParamType =
 //                  std::vector<double>, std::vector<std::string>,
 //                  std::vector<bool>,
 //                  std::vector<std::chrono::system_clock::time_point>>;
+
+enum class DatabaseDialect { PostgreSQL = 1, Oracle = 2 };
+
+// cppcheck-suppress unknownMacro
+NVM_ENUM_CLASS_DISPLAY_TRAIT(DatabaseDialect)
 
 struct RecordTable {
   std::string name;
@@ -59,7 +81,6 @@ struct RecordTable {
 
 enum class FieldPinMode : uint16_t { None = 0, Beginning = 1, End = 2 };
 
-// cppcheck-suppress unknownMacro
 NVM_ENUM_CLASS_DISPLAY_TRAIT(FieldPinMode)
 
 enum class SortType : uint16_t { Ascending = 0, Descending = 1 };
@@ -136,6 +157,23 @@ class HavingByStatement;
 // Forward declaration for NvSelect
 template <typename TParameterType = DefaultPostgresParamType>
 class NvSelect;
+
+inline std::string DetermineParameterFormat(const DatabaseDialect& dialect,
+                                            const uint32_t parameter_index) {
+  std::ostringstream ss;
+  switch (dialect) {
+    case DatabaseDialect::PostgreSQL:
+      ss << "$" << parameter_index;
+      break;
+    case DatabaseDialect::Oracle:
+      ss << ":" << parameter_index;
+      break;
+    default:
+      break;
+  }
+
+  return ss.str();
+}
 
 inline std::string SqlOperatorToString(SqlOperator op) {
   switch (op) {
