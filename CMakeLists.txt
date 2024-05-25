@@ -1,32 +1,32 @@
 cmake_minimum_required(VERSION 3.10)
-project(nvm-core CXX)
+project(nvcore CXX)
 
-message( "NVM::NVM CORE PLUGINS v2")
+message( "NvCore PLUGINS v2")
 message( "-----------------------------")
-message(STATUS "NVM::NVM_CORE LIB DIR:${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "NvCore LIB DIR:${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 set(ABSL_PROPAGATE_CXX_STD ON)
 
-option(LIB_NVM_CORE_BUILD_DOC "Build documentation" OFF)
-option(LIB_NVM_CORE_SANITIZE_ADDRESS "SANITIZE ADDRESS" ON)
-option(LIB_NVM_CORE_USE_CATCH ON)
-option(LIB_NVM_CORE_USE_LIB ON)
-option(LIB_NVM_CORE_USE_TEST ON)
+option(LIB_NV_CORE_BUILD_DOC "Build documentation" OFF)
+option(LIB_NV_CORE_SANITIZE_ADDRESS "SANITIZE ADDRESS" ON)
+option(LIB_NV_CORE_USE_CATCH ON)
+option(LIB_NV_CORE_USE_LIB ON)
+option(LIB_NV_CORE_USE_TEST ON)
 
-set(LIB_NVM_CORE_BUILD_DOC OFF)
-set(LIB_NVM_CORE_SANITIZE_ADDRESS ON)
-set(LIB_NVM_CORE_USE_CATCH ON)
-set(LIB_NVM_CORE_USE_LIB ON)
-set(LIB_NVM_CORE_USE_TEST ON)
+set(LIB_NV_CORE_BUILD_DOC OFF)
+set(LIB_NV_CORE_SANITIZE_ADDRESS ON)
+set(LIB_NV_CORE_USE_CATCH ON)
+set(LIB_NV_CORE_USE_LIB ON)
+set(LIB_NV_CORE_USE_TEST ON)
 
 
 # Add ASAN
-if(LIB_NVM_CORE_SANITIZE_ADDRESS)
+if(LIB_NV_CORE_SANITIZE_ADDRESS)
     set(SANITIZE_ADDRESS ON)
-endif(LIB_NVM_CORE_SANITIZE_ADDRESS)
+endif(LIB_NV_CORE_SANITIZE_ADDRESS)
 
 #  make ourself sanitize and sane well.
 if(NOT Sanitizers_FOUND)
@@ -34,7 +34,7 @@ if(NOT Sanitizers_FOUND)
 endif()
 
 # Add Doxygen
-if(LIB_NVM_CORE_BUILD_DOC)
+if(LIB_NV_CORE_BUILD_DOC)
     if(NOT DOXYGEN_FOUND)
         find_package(Doxygen)
     endif()
@@ -57,10 +57,10 @@ if(LIB_NVM_CORE_BUILD_DOC)
     else (DOXYGEN_FOUND)
         message("Doxygen need to be installed to generate the doxygen documentation")
     endif (DOXYGEN_FOUND)
-endif(LIB_NVM_CORE_BUILD_DOC)
+endif(LIB_NV_CORE_BUILD_DOC)
 
 # Add Unit Test Lib Catch2
-if(LIB_NVM_CORE_USE_CATCH)
+if(LIB_NV_CORE_USE_CATCH)
  message(STATUS  "CATCH2::ADD_LIB.")
  find_package(Catch2 3 REQUIRED)
 endif()
@@ -109,7 +109,7 @@ set( BUILD_TZ_LIB  OFF )
 # SET(BUILD_TZ_LIB OFF)
 
 # Main headers and sources
-file(GLOB_RECURSE SOURCES_NVM_CORE CONFIGURE_DEPENDS
+file(GLOB_RECURSE SOURCES_NV_CORE CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/inc/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.s
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/hhdate/include/*.h
@@ -118,7 +118,7 @@ file(GLOB_RECURSE SOURCES_NVM_CORE CONFIGURE_DEPENDS
 
 
 
-add_library(${PROJECT_NAME} STATIC ${SOURCES_NVM_CORE} )
+add_library(${PROJECT_NAME} STATIC ${SOURCES_NV_CORE} )
 target_link_libraries(${PROJECT_NAME}  
     utf8cpp )
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
@@ -156,10 +156,10 @@ target_include_directories("${PROJECT_NAME}-test"
         inc/
 )
 
-if(LIB_NVM_CORE_USE_TEST)
+if(LIB_NV_CORE_USE_TEST)
     message(STATUS "TEST::ADD_UNIT_TEST.")
     add_subdirectory(tests/nvm)
 endif()       
 
-message(STATUS "NVM::Core LIB Configuration Done!\n")
-set(nvm_core_FOUND  ON)
+message(STATUS "NvCore LIB Configuration Done!\n")
+set(nvcore_FOUND  ON)
