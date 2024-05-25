@@ -659,7 +659,7 @@ Build:
 
 1. Clone main repository and clone the submodules
 ```sh
-git clone --recurse-submodules https://github.com/lwdjohari/nvm-core.git
+git clone --recurse-submodules https://github.com/lwdjohari/nvcore.git
 ```
 
 2. Open in your favorite IDE
