@@ -15,6 +15,23 @@
 
 namespace nvm::threads {
 
+    // Define a macro to conditionally use std::result_of for C++14 and
+// std::invoke_result for C++17 and later
+#if __cplusplus < 201703L
+#define RESULT_OF(F, ...) \
+  typename std::result_of<F(__VA_ARGS__)>::type  // C++14
+#else
+#define RESULT_OF(F, ...) \
+  typename std::invoke_result<F, __VA_ARGS__>::type  // C++17
+#endif
+
+// Define a macro to handle if constexpr for C++14
+#if __cplusplus < 201703L
+#define IF_CONSTEXPR if
+#else
+#define IF_CONSTEXPR if constexpr
+#endif
+
 enum class ExecutorWaitingMode { None, AllOf, OneOf };
 
 NVM_ENUM_CLASS_DISPLAY_TRAIT(ExecutorWaitingMode)
@@ -31,3 +48,4 @@ using AsyncTaskList = std::vector<AsyncTaskFunc>;
 using CircuitBreaker = std::function<bool(const AsyncTask&)>;
 
 }  // namespace nvm::threads
+

@@ -5,14 +5,17 @@
 #include <functional>
 #include <future>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <stdexcept>
 #include <thread>
 #include <type_traits>
-#include <vector>
 #include <utility>
+#include <vector>
+
 #include "nvm/threads/def.h"
+#include "nvm/threads/promisizer.h"
 
 namespace nvm::threads {
 
@@ -43,6 +46,10 @@ class TaskPool final : public std::enable_shared_from_this<TaskPool> {
     workers_ = PrepareThreads(thread_count_, task_queue_limit_);
   }
 
+  // Delete copy constructor and copy assignment operator
+  TaskPool(const TaskPool&) = delete;
+  TaskPool& operator=(const TaskPool&) = delete;
+
   ~TaskPool() {
     {
       std::unique_lock<std::mutex> lock(queue_mutex_);
@@ -54,13 +61,13 @@ class TaskPool final : public std::enable_shared_from_this<TaskPool> {
     }
   }
 
-  static TaskPoolPtr Create(
+  static std::shared_ptr<TaskPool> Create(
       uint16_t thread_count = std::thread::hardware_concurrency(),
       uint16_t queue_limit = 500) {
     return std::make_shared<TaskPool>(thread_count, queue_limit);
   }
 
-  TaskPoolPtr Share() {
+  std::shared_ptr<TaskPool> Share() {
     return shared_from_this();
   }
 
@@ -136,32 +143,10 @@ class TaskPool final : public std::enable_shared_from_this<TaskPool> {
   }
 };
 
-// Template function to unpack and return future results
-template <typename T>
-std::vector<T> UnpackFuture(std::vector<std::future<T>>& futures) {
-  std::vector<T> results;
-  results.reserve(futures.size());
+inline void WaitAllTask(std::vector<std::future<void>*>& futures) {
   for (auto& future : futures) {
-    // cppcheck-suppress useStlAlgorithm
-    results.push_back(std::move(future.get()));
+    future->wait();
   }
-
-#if __cplusplus < 201703L
-  // cppcheck-suppress returnStdMoveLocal
-  return std::move(results);
-#else
-  return results;
-#endif
-};
-
-// Template function to unpack and return future results
-template <typename T>
-T UnpackFuture(std::future<void>& future) {
-#if __cplusplus < 201703L
-  return std::move(future.get()); 
-#else
-  return future.get();
-#endif
-};
+}
 
 }  // namespace nvm::threads

@@ -8,6 +8,73 @@
 #include "nvm/threads/async_executor.h"
 using namespace nvm;
 
+TEST_CASE("nvasync-taskpool-promisizer", "[nvasync][async-executor]") {
+  using NvAsync = nvm::threads::AsyncExecutor;
+  using NvDateTime = nvm::dates::DateTime;
+  using NvTaskPool = nvm::threads::TaskPool;
+  using Stopwatch = nvm::Stopwatch;
+  using namespace nvm::threads;
+
+  auto pool = NvTaskPool::Create(4, 10);  // 4 threads, queue limit of 10 tasks
+  auto shared_pool = pool->Share();       // Create a shared pointer to the pool
+  Stopwatch sw;
+
+  int x = 10;
+  auto lambda1 = MakeTask(
+      [x](int i) -> int {
+        std::this_thread::sleep_for(std::chrono::seconds(3));  // Simulate work
+        // if (i == 5)
+        //   throw std::runtime_error("Intentional error");
+        return i * 2 + x;
+      },
+      5);
+
+  auto lambda2 = MakeTask([]() {
+    std::this_thread::sleep_for(std::chrono::seconds(3));  // Simulate work
+    std::cout << "Work done" << std::endl;
+  });
+
+  auto lambda3 = MakeTask(
+      [x](const std::string& str, int count) -> std::string {
+        std::this_thread::sleep_for(std::chrono::seconds(2));  // Simulate work
+        return str + " repeated " + std::to_string(count) +
+               " times, plus x: " + std::to_string(x);
+      },
+      "Hello", 3);
+
+  auto lambda4 = MakeTask(
+      [](double value) -> double {
+        std::this_thread::sleep_for(std::chrono::seconds(1));  // Simulate work
+        return value * 3.14;
+      },
+      2.5);
+
+  auto f1 = shared_pool->ExecuteTask(lambda1);
+  auto f2 = shared_pool->ExecuteTask(lambda2);
+  auto f3 = shared_pool->ExecuteTask(lambda3);
+  auto f4 = shared_pool->ExecuteTask(lambda4);
+
+  auto ptr = {&f1, &f2, &f3};
+  auto futures = PackTaskPtr(ptr);
+
+  // Wait for all tasks to complete
+  WaitAllTask(futures);
+
+  // res2 is void, we must wrap it with some object
+  auto res1 = std::move(lambda1.Future().get());
+  auto res3 = std::move(lambda3.Future().get());
+  auto res4 = std::move(lambda4.Future().get());
+
+  std::cout << "Task-1:" << res1 << std::endl;
+  std::cout << "Task-3:" << res3 << std::endl;
+  std::cout << "Task-4:" << res4 << std::endl;
+
+  std::cout << "Executed in: " << sw.ElapsedMilliseconds() << " ms"
+            << std::endl;
+
+  REQUIRE(true == true);
+}
+
 TEST_CASE("nvasync-taskpool-test", "[nvasync][async-executor]") {
   using NvAsync = nvm::threads::AsyncExecutor;
   using NvDateTime = nvm::dates::DateTime;
@@ -40,7 +107,8 @@ TEST_CASE("nvasync-taskpool-test", "[nvasync][async-executor]") {
     promise2.set_value(std::make_pair(time_start, time_end));
   };
 
-  auto lambda_task3 = [&promise3](std::string name) {
+  // cppcheck-suppress passedByValue
+  auto lambda_task3 = [&promise3](std::string name, int count) {
     auto time_start = NvDateTime::Now();
     std::this_thread::sleep_for(
         std::chrono::seconds(5));  // Simulate even longer work
@@ -50,18 +118,13 @@ TEST_CASE("nvasync-taskpool-test", "[nvasync][async-executor]") {
 
   auto f1 = shared_pool->ExecuteTask(lambda_task1, 1);
   auto f2 = shared_pool->ExecuteTask(lambda_task2, 2);
-  auto f3 = shared_pool->ExecuteTask(lambda_task3, std::string("promise-3"));
+  auto f3 = shared_pool->ExecuteTask(lambda_task3, std::string("promise-3"), 3);
 
-  // Collect futures
-  std::vector<std::future<void>*> futures;
-  futures.push_back(&f1.first);
-  futures.push_back(&f2.first);
-  futures.push_back(&f3.first);
+  auto ptr = {&f1, &f2, &f3};
+  auto futures = PackTaskPtr(ptr);
 
   // Wait for all tasks to complete
-  for (auto& future : futures) {
-    future->wait();
-  }
+  WaitAllTask(futures);
 
   auto res1 = std::move(future1.get());
   auto res2 = std::move(future2.get());
@@ -69,9 +132,10 @@ TEST_CASE("nvasync-taskpool-test", "[nvasync][async-executor]") {
 
   std::cout << "Task-1:" << res1.first << " | " << res1.second << std::endl;
   std::cout << "Task-2:" << res2.first << " | " << res2.second << std::endl;
-  std::cout << "Task-2:" << res3.first << " | " << res3.second << std::endl;
+  std::cout << "Task-3:" << res3.first << " | " << res3.second << std::endl;
 
-  std::cout << "Executed in: " << sw.ElapsedMilliseconds() << " ms" << std::endl;
+  std::cout << "Executed in: " << sw.ElapsedMilliseconds() << " ms"
+            << std::endl;
 
   // REQUIRE(res1 == 1);
   // REQUIRE(res2 == 2);
