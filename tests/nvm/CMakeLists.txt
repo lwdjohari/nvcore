@@ -19,6 +19,8 @@ set(TEST_SOURCES
     validation_test.cc
     select_test.cc
     struct_mapper_test.cc
+    nvsql-policy/order_by_policy_test.cc
+    nvasync/nv_async_test.cc
     # Add more test files if needed
 )
 

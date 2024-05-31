@@ -199,7 +199,10 @@ TEST_CASE("select-join-complex-2", "[validator][normal-case]") {
       .Asc("service_name")
       .Asc("unit_type_code")
       .Asc("unit_type_class_code")
-    .EndOrderByBlock();
+    .EndOrderByBlock()
+    .LimitOffset()
+      .LimitOffset(30,0)
+    .EndLimitOffsetBlock();
 
   // clang-format on
 
