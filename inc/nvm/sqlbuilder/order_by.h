@@ -28,6 +28,7 @@
 #include <unordered_map>
 
 #include "nvm/sqlbuilder/def.h"
+#include "nvm/sqlbuilder/policy/order_by.h"
 
 namespace nvm::sqlbuilder {
 struct OrderByClause {
@@ -72,24 +73,24 @@ class OrderByStatement {
  public:
   OrderByStatement() : parent_(nullptr), sorts_(), level_() {}
 
-  explicit OrderByStatement(NvSelect<TParameterType>* parent,
-                            uint32_t level)
+  explicit OrderByStatement(NvSelect<TParameterType>* parent, uint32_t level)
                   : parent_(parent), sorts_(), level_(level) {}
+
+  OrderByStatement& ApplyFrom(
+      const policy::OrderByPolicyParameter<TParameterType>& parameters);
 
   OrderByStatement& Asc(
       const std::string& field_name,
       const std::optional<std::string>& table_alias = std::nullopt,
       bool define_sort_type = true) {
-    return By(field_name, table_alias, SortType::Ascending,
-                   define_sort_type);
+    return By(field_name, table_alias, SortType::Ascending, define_sort_type);
   }
 
   OrderByStatement& Desc(
       const std::string& field_name,
       const std::optional<std::string>& table_alias = std::nullopt,
       bool define_sort_type = true) {
-    return By(field_name, table_alias, SortType::Descending,
-                   define_sort_type);
+    return By(field_name, table_alias, SortType::Descending, define_sort_type);
   }
 
   OrderByStatement& By(
@@ -132,4 +133,4 @@ class OrderByStatement {
   uint32_t level_;
 };
 
-}  // namespace nvm::containers
+}  // namespace nvm::sqlbuilder

@@ -28,900 +28,15 @@
 #include <vector>
 
 #include "nvm/sqlbuilder/def.h"
+#include "nvm/sqlbuilder/fields.h"
+#include "nvm/sqlbuilder/from.h"
 #include "nvm/sqlbuilder/group_by.h"
+#include "nvm/sqlbuilder/join.h"
+#include "nvm/sqlbuilder/limit_offset_statement.h"
 #include "nvm/sqlbuilder/order_by.h"
 #include "nvm/sqlbuilder/where.h"
+
 namespace nvm::sqlbuilder {
-
-struct RecordKey {
-  std::string table;
-  std::string field;
-  std::optional<std::string> table_alias;
-  bool initialize;
-
-  RecordKey()
-                  : table(),
-                    field(),
-                    table_alias(std::nullopt),
-                    initialize(false) {}
-
-  explicit RecordKey(const std::string& table, const std::string& field,
-                     const std::optional<std::string>& alias = std::nullopt)
-                  : table(std::string(table)),
-                    field(std::string(field)),
-                    table_alias(std::optional<std::string>(alias)),
-                    initialize(true) {}
-
-  std::string BuildField() const {
-    return table_alias.has_value() ? table_alias.value() + "." + field
-                                   : table + "." + field;
-  }
-
-  std::string BuildTableName() const {
-    return table_alias.has_value() ? table + " AS " + table_alias.value()
-                                   : table;
-  }
-};
-
-template <typename TParameterType = DefaultPostgresParamType>
-class JoinDef {
- public:
-  JoinDef(RecordKey&& left_table, RecordKey&& right_table, SqlJoinType join,
-          uint32_t level, DatabaseDialect dialect)
-                  : subquery_str_(),
-                    subsquery_str_alias_(),
-                    subquery_field_key_(),
-                    subquery_obj_(),
-                    left_table_(std::forward<RecordKey>(left_table)),
-                    right_table_(std::forward<RecordKey>(right_table)),
-                    join_type_(join),
-                    join_mode_(JoinDefMode::RecordKeyBoth),
-                    level_(level),
-                    dialect_(dialect) {}
-
-  JoinDef(RecordKey&& left_table, SqlJoinType join, const std::string& subquery,
-          const std::string& subquery_field_key,
-          const std::string& subquery_table_alias, SqlOperator op,
-          uint32_t level, DatabaseDialect dialect)
-                  : subquery_str_(std::string(subquery)),
-                    subsquery_str_alias_(std::string(subquery_table_alias)),
-                    subquery_field_key_(std::string(subquery_field_key)),
-                    subquery_obj_(),
-                    left_table_(std::forward<RecordKey>(left_table)),
-                    right_table_(RecordKey()),
-                    join_type_(join),
-                    join_mode_(JoinDefMode::SubquerySelectString),
-                    level_(level),
-                    dialect_(dialect) {}
-
-  JoinDef(RecordKey&& existing_table, NvSelect<TParameterType>&& subquery,
-          SqlJoinType join, uint32_t level, DatabaseDialect dialect)
-                  : subquery_str_(),
-                    subsquery_str_alias_(),
-                    subquery_field_key_(),
-                    subquery_obj_(std::make_shared<NvSelect<TParameterType>>(
-                        std::forward<NvSelect<TParameterType>>(subquery))),
-                    left_table_(std::forward<RecordKey>(existing_table)),
-                    right_table_(RecordKey()),
-                    join_type_(join),
-                    join_mode_(JoinDefMode::SubquerySelectObject),
-                    level_(level),
-                    dialect_(dialect) {}
-
-  SqlJoinType JoinType() const {
-    return join_type_;
-  }
-
-  JoinDefMode Mode() const {
-    return join_mode_;
-  }
-
-  const RecordKey& LeftTable() const {
-    return left_table_;
-  }
-
-  const RecordKey& RightTable() const {
-    return right_table_;
-  }
-
-  NvSelect<TParameterType>& Subquery() {
-    return *subquery_obj_;
-  }
-
-  bool IsHasSubqueryObject() {
-    return subquery_obj_ != nullptr;
-  }
-
-  const std::string& SubqueryString() const {
-    return subquery_str_;
-  }
-
-  const std::string& SubqueryAliasString() const {
-    return subsquery_str_alias_;
-  }
-
-  std::string GenerateQuery(bool pretty_print = false) const {
-    switch (join_mode_) {
-      case JoinDefMode::RecordKeyBoth:
-        return GenerateJoinRecordBoth(pretty_print);
-        break;
-      case JoinDefMode::SubquerySelectString:
-        return GenerateJoinRecordSubqueryString();
-        break;
-      case JoinDefMode::SubquerySelectObject:
-        return GenerateJoinRecordSubqueryObject();
-        break;
-      default:
-        break;
-    }
-
-    return std::string();
-  }
-
- private:
-  std::string subquery_str_;
-  std::string subsquery_str_alias_;
-  std::string subquery_field_key_;
-  mutable std::shared_ptr<NvSelect<TParameterType>> subquery_obj_;
-  RecordKey left_table_;
-  RecordKey right_table_;
-  SqlJoinType join_type_;
-  JoinDefMode join_mode_;
-  SqlOperator sql_operator_;
-  uint32_t level_;
-  DatabaseDialect dialect_;
-
-  std::string GenerateJoinRecordBoth(bool pretty_print) const {
-    if (join_type_ == SqlJoinType::InnerJoin) {
-      return GenerateInnerJoin(left_table_, right_table_, pretty_print);
-    } else if (join_type_ == SqlJoinType::LeftJoin) {
-      return GenerateLeftJoin(left_table_, right_table_, pretty_print);
-    } else if (join_type_ == SqlJoinType::RightJoin) {
-      return GenerateRightJoin(left_table_, right_table_);
-    }
-
-    return std::string();
-  }
-
-  std::string GenerateJoinRecordSubqueryString() const {
-    if (join_type_ == SqlJoinType::InnerJoin) {
-      return GenerateInnerJoin(left_table_, subquery_str_, subquery_field_key_,
-                               subsquery_str_alias_, sql_operator_);
-    } else if (join_type_ == SqlJoinType::LeftJoin) {
-      return GenerateLeftJoin(left_table_, subquery_str_, subquery_field_key_,
-                              subsquery_str_alias_, sql_operator_);
-    } else if (join_type_ == SqlJoinType::RightJoin) {
-      return GenerateRightJoin(left_table_, subquery_str_, subquery_field_key_,
-                               subsquery_str_alias_, sql_operator_);
-    }
-
-    return std::string();
-  }
-
-  std::string GenerateJoinRecordSubqueryObject() const;
-
-  std::string GenerateLeftJoin(const RecordKey& left_key,
-                               const RecordKey& right_key,
-                               bool pretty_print) const {
-    std::ostringstream join;
-    // clang-format off
-    join << 
-        (pretty_print? GenerateIndentation(level_) : "") << 
-        (pretty_print? "LEFT JOIN\n" : "LEFT JOIN ") << 
-        (pretty_print? GenerateIndentation(level_+1) : "") <<
-        right_key.BuildTableName() <<  
-        (pretty_print? "\n" + GenerateIndentation(level_+1) + "ON\n" : " ON ") << 
-        (pretty_print? GenerateIndentation(level_+2) : "") << 
-        left_key.BuildField() << " = " << right_key.BuildField();
-    // clang-format on
-
-    return join.str();
-  }
-
-  std::string GenerateLeftJoin(const RecordKey& right_table,
-                               const std::string& left_table,
-                               const std::string& left_table_field_key,
-                               const std::string& left_table_alias,
-                               SqlOperator op = SqlOperator::kEqual) const {
-    std::ostringstream join;
-
-    // clang-format off
-    join << 
-        "LEFT JOIN " << 
-        "(" << left_table << ")" << 
-         (!left_table_alias.empty()? 
-          " AS " + left_table_alias : "") << 
-        " ON " << 
-        (!left_table_alias.empty()? 
-        left_table_alias + "." + left_table_field_key  : left_table_field_key) <<
-        SqlOperatorToString(op) <<
-        right_table.BuildField();
-    // clang-format on
-
-    return join.str();
-  }
-
-  std::string GenerateRightJoin(const RecordKey& left_table,
-                                const RecordKey& right_table) const {
-    std::ostringstream join;
-    // clang-format off
-    join << 
-        "RIGHT JOIN " << 
-        right_table.BuildTableName() << 
-        " ON " << 
-        left_table.BuildField() << " = " << right_table.BuildField();
-    // clang-format on
-
-    return join.str();
-  }
-
-  std::string GenerateRightJoin(const RecordKey& left_table,
-                                const std::string& right_table,
-                                const std::string& right_table_field_key,
-                                const std::string& right_table_alias,
-                                SqlOperator op = SqlOperator::kEqual) const {
-    std::ostringstream join;
-    // clang-format off
-    join << 
-        "RIGHT JOIN " << 
-        "(" << right_table << ")" << 
-         (!right_table_alias.empty()? 
-          " AS " + right_table_alias : "") << 
-        " ON " << 
-        left_table.BuildField() <<
-        SqlOperatorToString(op) << 
-        (!right_table_alias.empty()? 
-          right_table_alias + "." + right_table_field_key : right_table_field_key);
-
-    // clang-format on
-
-    return join.str();
-  }
-
-  std::string GenerateInnerJoin(const RecordKey& existing_select,
-                                const RecordKey& join_on_table,
-                                bool pretty_print) const {
-    std::ostringstream join;
-    // clang-format off
-    join << 
-        (pretty_print? GenerateIndentation(level_) : "") << 
-        (pretty_print? "INNER JOIN\n" : "INNER JOIN ") << 
-        (pretty_print? GenerateIndentation(level_+1) : "") <<
-        join_on_table.BuildTableName() <<  
-        (pretty_print? "\n" + GenerateIndentation(level_+1) + "ON\n" : " ON ") << 
-        (pretty_print? GenerateIndentation(level_+2) : "") << 
-        existing_select.BuildField() << " = " << join_on_table.BuildField();
-    // clang-format on
-
-    return join.str();
-  }
-
-  std::string GenerateInnerJoin(const RecordKey& existing_select,
-                                const std::string& join_on_table,
-                                const std::string& join_table_field_key,
-                                const std::string& join_table_alias,
-                                SqlOperator op = SqlOperator::kEqual) const {
-    std::ostringstream join;
-    // clang-format off
-    join << 
-        "INNER JOIN " << 
-        "(" << join_on_table << ")" << 
-         (!join_table_alias.empty()? 
-          " AS " + join_table_alias : "") << 
-        " ON " << 
-        existing_select.BuildField() <<
-        SqlOperatorToString(op) << 
-        (!join_table_alias.empty()? 
-          join_table_alias + "." +  join_table_field_key : join_table_field_key);
-    // clang-format on
-    return join.str();
-  }
-};
-
-template <typename TParameterType = DefaultPostgresParamType>
-class JoinStatement {
- private:
-  NvSelect<TParameterType>& parent_;
-  std::vector<JoinDef<TParameterType>> joins_;
-  // std::unique_ptr<NvSelect<TParameterType>> subquery_;
-  uint32_t current_parameter_index_;
-  uint32_t level_;
-  DatabaseDialect dialect_;
-
- public:
-  explicit JoinStatement(NvSelect<TParameterType>& parent,
-                         uint32_t parameter_index, uint32_t level,
-                         DatabaseDialect dialect)
-                  : parent_(parent),
-                    joins_(),
-                    // subquery_(nullptr),
-                    current_parameter_index_(parameter_index),
-                    level_(level),
-                    dialect_(dialect) {}
-
-  NvSelect<TParameterType>& EndJoinBlock() {
-    // sync the current_parameter
-    parent_.UpdateCurrentParamIndex(current_parameter_index_);
-    return parent_;
-  };
-
-  std::string __GenerateSelectBlock(const NvSelect<TParameterType>& select);
-
-  const std::vector<JoinDef<TParameterType>>& GetJoinClauses() const {
-    return joins_;
-  }
-
-  bool Empty() const {
-    return joins_.empty();
-  }
-
-  std::string GenerateQuery(bool prety_print = false) const {
-    std::ostringstream query;
-    bool is_first_element = true;
-    for (const auto& clause : joins_) {
-      if (!is_first_element)
-        query << (prety_print ? "\n" : " ");
-      query << clause.GenerateQuery(prety_print);
-      is_first_element = false;
-    }
-    return query.str();
-  }
-
-  /// @brief Construct LEFT JOIN Statement
-  /// @param left_table
-  /// @param right_table
-  /// @return
-  JoinStatement& LeftJoin(RecordKey&& left_table, RecordKey&& right_table) {
-    joins_.emplace_back(std::forward<RecordKey>(left_table),
-                        std::forward<RecordKey>(right_table),
-                        SqlJoinType::LeftJoin, level_, dialect_);
-    return *this;
-  }
-
-  /// @brief Construct LEFT Join by query string
-  /// @param right_table
-  /// @param left_table
-  /// @param left_table_field_key
-  /// @param left_table_alias
-  /// @param op
-  /// @return
-  JoinStatement& LeftJoin(RecordKey&& right_table,
-                          const std::string& left_table,
-                          const std::string& left_table_field_key,
-                          const std::string& left_table_alias,
-                          SqlOperator op = SqlOperator::kEqual) {
-    // Const format
-    // RecordKey&& left_table, SqlJoinType join,
-    //       const std::string& subquery,
-    //       const std::string& subquery_field_key,
-    //       const std::optional<std::string>& subquery_table_alias,
-    //       SqlOperator op = SqlOperator::kEqual
-
-    joins_.emplace_back(std::forward<RecordKey>(right_table),
-                        SqlJoinType::LeftJoin, left_table, left_table_field_key,
-                        left_table_alias, op, level_, dialect_);
-    return *this;
-  }
-
-  /// @brief Construct RIGHT JOIN statement
-  /// @param left_table
-  /// @param right_table
-  /// @return
-  JoinStatement& RightJoin(RecordKey&& left_table, RecordKey&& right_table) {
-    joins_.emplace_back(std::forward<RecordKey>(left_table),
-                        std::forward<RecordKey>(right_table),
-                        SqlJoinType::RightJoin, level_);
-    return *this;
-  }
-
-  /// @brief Construct RIGHT JOIN statement from query string
-  /// @param left_table
-  /// @param right_table
-  /// @param right_table_field_key
-  /// @param right_table_alias
-  /// @param op
-  /// @return
-  JoinStatement& RightJoin(RecordKey&& left_table,
-                           const std::string& right_table,
-                           const std::string& right_table_field_key,
-                           const std::optional<std::string>& right_table_alias,
-                           SqlOperator op = SqlOperator::kEqual) {
-    // Const format
-    // RecordKey&& left_table, SqlJoinType join,
-    //       const std::string& subquery,
-    //       const std::string& subquery_field_key,
-    //       const std::optional<std::string>& subquery_table_alias,
-    //       SqlOperator op = SqlOperator::kEqual
-
-    joins_.emplace_back(
-        std::forward<RecordKey>(left_table), SqlJoinType::LeftJoin, right_table,
-        right_table_field_key, right_table_alias, op, level_, dialect_);
-
-    return *this;
-  }
-
-  /// @brief Construct INNER JOIN statement
-  /// @param existing_select
-  /// @param join_on_table
-  /// @return
-  JoinStatement& InnerJoin(RecordKey&& existing_select,
-                           RecordKey&& join_on_table) {
-    joins_.emplace_back(std::forward<RecordKey>(existing_select),
-                        std::forward<RecordKey>(join_on_table),
-                        SqlJoinType::InnerJoin, level_, dialect_);
-    return *this;
-  }
-
-  /// @brief Construct INNER JOIN from query string
-  /// @param existing_select
-  /// @param join_on_table
-  /// @param join_table_field_key
-  /// @param join_table_alias
-  /// @param op
-  /// @return
-  JoinStatement& InnerJoin(RecordKey& existing_select,
-                           const std::string& join_on_table,
-                           const std::string& join_table_field_key,
-                           const std::optional<std::string>& join_table_alias,
-                           SqlOperator op = SqlOperator::kEqual) {
-    // Const format
-    // RecordKey&& left_table, SqlJoinType join,
-    //       const std::string& subquery,
-    //       const std::string& subquery_field_key,
-    //       const std::optional<std::string>& subquery_table_alias,
-    //       SqlOperator op = SqlOperator::kEqual
-
-    joins_.emplace_back(std::forward<RecordKey>(existing_select),
-                        SqlJoinType::LeftJoin, join_on_table,
-                        join_table_field_key, join_table_alias, op, level_,
-                        dialect_);
-    return *this;
-  }
-
-  // NvSelect<TParameterType>& JoinWithSubquery(SqlJoinType join_type) {
-  //   if (!subquery_) {
-  //     subquery_ = std::make_shared<NvSelect<TParameterType>>(
-  //         parent_.GetCurrentParamIndex());
-  //   }
-
-  //   return subquery_;
-  // }
-};
-
-struct FromTable {
-  std::string table;
-  std::optional<std::string> table_alias;
-
-  FromTable() : table(), table_alias() {}
-
-  explicit FromTable(const std::string& table,
-                     const std::optional<std::string>& alias = std::nullopt)
-                  : table(table), table_alias(alias) {}
-
-  std::string BuildTableName() const {
-    return table_alias.has_value() ? table + " AS " + table_alias.value()
-                                   : table;
-  }
-};
-
-template <typename TParameterType = DefaultPostgresParamType>
-class FromTableStatement {
- private:
-  NvSelect<TParameterType>* parent_;
-  std::vector<FromTable> tables_;
-  std::vector<NvSelect<TParameterType>> subqueries_;
-  std::shared_ptr<std::vector<TParameterType>> parameter_values_;
-  uint32_t level_;
-  uint32_t current_parameter_index_;
-  DatabaseDialect dialect_;
-
-  std::string __GetTableAliasFromParent(
-      const NvSelect<TParameterType>& select) const;
-
-  uint32_t __GetCurrentParameterIndexFromParent(
-      const NvSelect<TParameterType>& select) const;
-
-  void __CreateNewSelectBlock(std::vector<NvSelect<TParameterType>>& selects,
-                              uint32_t index, uint32_t level,
-                              const std::string& table_alias);
-
-  std::string __GenerateSelectQuery(const NvSelect<TParameterType>& selects,
-                                    bool pretty_print) const;
-
- public:
-  explicit FromTableStatement(
-      std::shared_ptr<std::vector<TParameterType>> values,
-      NvSelect<TParameterType>* parent, uint32_t parameter_index,
-      uint32_t level, DatabaseDialect dialect)
-                  : parent_(parent),
-                    tables_(),
-                    parameter_values_(values),
-                    subqueries_(),
-                    level_(uint32_t(level)),
-                    current_parameter_index_(parameter_index),
-                    dialect_(dialect) {}
-
-  ~FromTableStatement() {}
-
-  /// @brief Add table clause inside FROM statement
-  /// @param table
-  /// @return
-  FromTableStatement& AddTable(FromTable&& table) {
-    tables_.emplace_back(std::forward<FromTable>(table));
-    return *this;
-  }
-
-  /// @brief Add table clause inside FROM statement
-  /// @param table_name
-  /// @param table_alias
-  /// @return
-  FromTableStatement& AddTable(
-      const std::string& table_name,
-      const std::optional<std::string>& table_alias = std::nullopt) {
-    tables_.emplace_back(table_name, table_alias);
-    return *this;
-  }
-
-  uint32_t GetCurrentParameterIndex() const {
-    return current_parameter_index_;
-  }
-
-  void UpdateCurrentParamIndex(uint32_t param_index) {
-    current_parameter_index_ = param_index;
-  }
-
-  /// @brief Construct SUBQUERY inside FROM Statement block
-  /// @param table_alias
-  /// @return
-  NvSelect<TParameterType>& BeginSubquery(const std::string& table_alias);
-
-  NvSelect<TParameterType>& Reset() {
-    subqueries_.clear();
-    tables_.clear();
-    current_parameter_index_ = 0;
-    return parent_;
-  }
-
-  bool Empty() const {
-    return tables_.empty();
-  }
-
-  /// @brief End of FROM statement BLOCK. For SUBQUERY must call
-  /// .EndSubqueryInsideFromBlock() to return back to FROM block stement.
-  /// @return
-  NvSelect<TParameterType>& EndFromTableBlock() {
-    if (!parent_) {
-      throw std::runtime_error("EndFromTableBlock() null-reference to parent_");
-    }
-
-    parent_->UpdateCurrentParamIndex(current_parameter_index_);
-    return *parent_;
-  }
-
-  std::string GenerateQuery(bool pretty_print = false) const {
-    std::ostringstream query;
-    bool first_element = true;
-    for (size_t i = 0; i < tables_.size(); ++i) {
-      if (!first_element) {
-        query << (pretty_print ? ",\n" : ", ");
-      }
-      query << (pretty_print ? GenerateIndentation(level_ + 1) : "")
-            << tables_[i].BuildTableName();
-
-      first_element = false;
-    }
-
-    if (!subqueries_.empty()) {
-      for (auto& s : subqueries_) {
-        auto alias = __GetTableAliasFromParent(s);
-        if (!first_element)
-          query << (pretty_print ? ",\n" : ", ");
-
-        query << (pretty_print ? GenerateIndentation(level_ + 1) + "(\n" : " (")
-              << __GenerateSelectQuery(s, pretty_print) << ")"
-              << (alias.empty() ? "" : " AS " + alias);
-      }
-    }
-    return query.str();
-  }
-};
-
-enum class FieldDefMode {
-  FieldRaw = 0,
-  FieldWType = 1,
-  FnStaticParameter = 2,
-  FnParameterizedValues = 3
-};
-
-// cppcheck-suppress unknownMacro
-NVM_ENUM_CLASS_DISPLAY_TRAIT(FieldDefMode)
-
-template <typename TParameterType = DefaultPostgresParamType>
-class FieldDef {
- private:
-  std::string field_;
-  std::optional<std::string> table_alias_;
-  const std::vector<std::string> static_param_values_;
-  std::shared_ptr<std::vector<TParameterType>> parameter_values_;
-  const std::vector<TParameterType> fn_values_;
-  std::string function_name_;
-  std::string parameter_format_;
-  bool enclose_field_name_;
-  SqlAggregateFunction aggregate_fn_;
-  std::optional<std::string> field_alias_;
-  uint32_t start_parameter_index_;
-  uint32_t current_parameter_index_;
-  uint32_t level_;
-  FieldDefMode mode_;
-  DatabaseDialect dialect_;
-
-  uint32_t ProcessFunctionParameterIndex(
-      const int32_t& current_param_index, const std::string& parameter_format,
-      const std::vector<TParameterType>& parameter_values,
-      const std::vector<std::string>& static_param_values) {
-    if (parameter_format.empty()) {
-      return current_param_index;
-    }
-
-    size_t index_params = 0;
-    uint32_t param_index = uint32_t(current_param_index);
-    size_t size_params = parameter_values.size();
-
-    for (char ch : parameter_format) {
-      if (index_params < size_params && ch == 'v') {
-        parameter_values_->push_back(fn_values_.at(index_params));
-        param_index += 1;
-        index_params += 1;
-      }
-    }
-
-    return param_index;
-  }
-
-  std::string BuildField() const {
-    std::ostringstream oss;
-
-    // Translate to sql keyword
-    if (aggregate_fn_ == SqlAggregateFunction::Distinct) {
-      oss << AggregateFunctionToString(aggregate_fn_) << " ";
-    } else if (aggregate_fn_ != SqlAggregateFunction::None) {
-      oss << AggregateFunctionToString(aggregate_fn_) << "(";
-    }
-
-    // append alias if any
-    if (table_alias_.has_value()) {
-      oss << table_alias_.value() << ".";
-    }
-
-    oss << field_;
-
-    // determine the function closure
-    if (aggregate_fn_ == SqlAggregateFunction::Distinct) {
-      oss << "";
-    } else if (aggregate_fn_ != SqlAggregateFunction::None) {
-      oss << ")";
-    }
-
-    // append new name alias if any
-    if (field_alias_.has_value()) {
-      oss << " AS " << field_alias_.value();
-    }
-
-    return oss.str();
-  }
-
-  std::string BuildFunctionWithDynamicParameters() const {
-    uint32_t param_index = start_parameter_index_;
-    size_t index_params = 0;
-    size_t index_statics = 0;
-    size_t size_params = fn_values_.size();
-    size_t size_statics = static_param_values_.size();
-    bool is_first_element = true;
-    std::ostringstream fn_call;
-
-    fn_call << function_name_ << "(";
-    for (char ch : parameter_format_) {
-      if ((index_statics < size_statics || index_params < size_params) &&
-          (ch == 's' || ch == 'v')) {
-        fn_call << (is_first_element ? "" : ", ");
-      }
-
-      if (ch == 's' && index_statics < size_statics) {
-        fn_call << static_param_values_[index_statics];
-        index_statics += 1;
-        is_first_element = false;
-      } else if (ch == 'v' && index_params < size_params) {
-        fn_call << DetermineParameterFormat(dialect_, param_index);
-        param_index += 1;
-        index_params += 1;
-        is_first_element = false;
-      }
-    }
-
-    fn_call << ")"
-            << (field_alias_.has_value() ? " AS " + field_alias_.value() : "");
-
-    return fn_call.str();
-  }
-
-  std::string BuildFunctionWithStaticParameters() const {
-    std::ostringstream fn_call;
-    fn_call << function_name_ << "(";
-    for (size_t i = 0; i < static_param_values_.size(); ++i) {
-      if (i > 0)
-        fn_call << ", ";
-      fn_call << static_param_values_[i];
-    }
-    fn_call << ")"
-            << (field_alias_.has_value() ? " AS " + field_alias_.value() : "");
-
-    return fn_call.str();
-  }
-
- public:
-  /// @brief Normal Field defintion
-  /// @param field
-  /// @param table_alias
-  /// @param enclose_field_name
-  /// @param aggregate_fn
-  /// @param field_alias
-  /// @param level
-  /// @param mode
-  explicit FieldDef(
-      DatabaseDialect dialect, const std::string& field,
-      const std::optional<std::string>& table_alias = std::nullopt,
-      bool enclose_field_name = false,
-      SqlAggregateFunction aggregate_fn = SqlAggregateFunction::None,
-      const std::optional<std::string>& field_alias = std::nullopt,
-      uint32_t level = 0, FieldDefMode mode = FieldDefMode::FieldWType)
-                  : field_(field),
-                    table_alias_(table_alias),
-                    static_param_values_(),
-                    parameter_values_(nullptr),
-                    fn_values_(),
-                    function_name_(),
-                    parameter_format_(),
-                    enclose_field_name_(enclose_field_name),
-                    aggregate_fn_(aggregate_fn),
-                    field_alias_(field_alias),
-                    start_parameter_index_(),
-                    current_parameter_index_(),
-                    level_(level),
-                    mode_(mode),
-                    dialect_(dialect) {}
-
-  /// @brief Function call static definitions
-  /// @param function_name
-  /// @param static_param_values
-  /// @param level
-  /// @param alias
-  explicit FieldDef(DatabaseDialect dialect, const std::string& function_name,
-                    const std::vector<std::string>& static_param_values,
-                    uint32_t level,
-                    const std::optional<std::string>& alias = std::nullopt)
-                  : field_(),
-                    table_alias_(),
-                    static_param_values_(static_param_values),
-                    parameter_values_(nullptr),
-                    fn_values_(),
-                    function_name_(function_name),
-                    parameter_format_(),
-                    enclose_field_name_(),
-                    aggregate_fn_(SqlAggregateFunction::None),
-                    field_alias_(alias),
-                    start_parameter_index_(),
-                    current_parameter_index_(),
-                    level_(level),
-                    mode_(FieldDefMode::FnStaticParameter),
-                    dialect_(dialect) {}
-
-  /// @brief Function call for parameterized parameters definitions
-  /// @param function_name
-  /// @param parameter_format
-  /// @param parameter_values
-  /// @param static_param_values
-  /// @param param_index
-  /// @param level
-  /// @param alias
-  explicit FieldDef(
-      DatabaseDialect dialect, const std::string& function_name,
-      const std::string& parameter_format,
-      std::shared_ptr<std::vector<TParameterType>> parameter_values,
-      const std::vector<TParameterType>& fn_param_values,
-      const std::vector<std::string>& static_param_values, uint32_t param_index,
-      uint32_t level, const std::optional<std::string>& alias = std::nullopt)
-                  : field_(),
-                    table_alias_(),
-                    static_param_values_(static_param_values),
-                    parameter_values_(parameter_values),
-                    fn_values_(fn_param_values),
-                    function_name_(function_name),
-                    parameter_format_(parameter_format),
-                    enclose_field_name_(),
-                    aggregate_fn_(SqlAggregateFunction::None),
-                    field_alias_(alias),
-                    start_parameter_index_(param_index),
-                    current_parameter_index_(ProcessFunctionParameterIndex(
-                        param_index, parameter_format, fn_values_,
-                        static_param_values_)),
-                    level_(level),
-                    mode_(FieldDefMode::FnParameterizedValues),
-                    dialect_(dialect) {}
-
-  FieldDefMode Mode() const {
-    return mode_;
-  }
-
-  uint32_t GetCurrentParameterIndex() const {
-    return current_parameter_index_;
-  }
-
-  std::string Field() const {
-    return field_;
-  }
-
-  std::optional<std::string> TableAlias() const {
-    return table_alias_;
-  }
-
-  std::optional<std::string> FieldAlias() const {
-    return field_alias_;
-  }
-
-  bool EncloseFieldName() const {
-    return enclose_field_name_;
-  }
-
-  SqlAggregateFunction AggregateFunction() const {
-    return aggregate_fn_;
-  }
-
-  std::string FunctionName() const {
-    return function_name_;
-  }
-
-  const std::vector<std::string>& StaticParameterValues() {
-    return static_param_values_;
-  }
-
-  std::shared_ptr<std::vector<TParameterType>> Values() const {
-    return parameter_values_;
-  }
-
-  std::string GenerateQuery() const {
-    switch (mode_) {
-      case FieldDefMode::FieldRaw:
-        return BuildField();
-      case FieldDefMode::FieldWType:
-        return BuildField();
-      case FieldDefMode::FnStaticParameter:
-        return BuildFunctionWithStaticParameters();
-      case FieldDefMode::FnParameterizedValues:
-        return BuildFunctionWithDynamicParameters();
-      default:
-        return std::string();
-    }
-  }
-
-  std::string AggregateFunctionToString(SqlAggregateFunction fn) const {
-    switch (fn) {
-      case SqlAggregateFunction::Distinct:
-        return "DISTINCT";
-      case SqlAggregateFunction::Count:
-        return "COUNT";
-      case SqlAggregateFunction::Avg:
-        return "AVG";
-      case SqlAggregateFunction::Sum:
-        return "SUM";
-      case SqlAggregateFunction::ToUpper:
-        return "TO_UPPER";
-      case SqlAggregateFunction::ToLower:
-        return "TO_LOWER";
-      default:
-        return "";
-    }
-  }
-};
 
 /// @brief Fluent SQL Select Builder. TParameterType is typedef of
 /// std::variant<supported_data_type_by_cpp_for_db>. You can customize to your
@@ -929,7 +44,7 @@ class FieldDef {
 /// you are use.
 /// @tparam TParameterType DefaultPostgresParamType.
 template <typename TParameterType>
-class NvSelect final {
+class NvSelect final : public NvSelectBasic {
  private:
   uint32_t current_param_index_;
   uint32_t level_;
@@ -943,6 +58,7 @@ class NvSelect final {
   std::shared_ptr<OrderByStatement<TParameterType>> order_by_;
   std::shared_ptr<GroupByStatement<TParameterType>> group_by_;
   WhereStatement<TParameterType>* subquery_where_parent_;
+  std::shared_ptr<LimitOffsetStatement<TParameterType>> limit_offset_;
   DatabaseDialect dialect_;
 
  public:
@@ -961,6 +77,7 @@ class NvSelect final {
                     order_by_(nullptr),
                     group_by_(nullptr),
                     subquery_where_parent_(nullptr),
+                    limit_offset_(nullptr),
                     dialect_(dialect) {}
 
   /// @brief Construct NvSelect with parameter as specified.
@@ -981,6 +98,7 @@ class NvSelect final {
                     order_by_(nullptr),
                     group_by_(nullptr),
                     subquery_where_parent_(nullptr),
+                    limit_offset_(nullptr),
                     dialect_(dialect) {}
 
   /// @brief DO NOT USE THIS DIRECTLY, SUBQUERY USE THIS CONST
@@ -1001,6 +119,7 @@ class NvSelect final {
                     order_by_(nullptr),
                     group_by_(nullptr),
                     subquery_where_parent_(nullptr),
+                    limit_offset_(nullptr),
                     dialect_(dialect) {}
 
   /// @brief DO NOT USE DIRECTLY, SUBQUERY FROM NESTED FROM STATEMENT USE THIS
@@ -1025,6 +144,7 @@ class NvSelect final {
                     order_by_(nullptr),
                     group_by_(nullptr),
                     subquery_where_parent_(nullptr),
+                    limit_offset_(nullptr),
                     dialect_(dialect) {}
 
   /// @brief DO NOT USE DIRECTLY, SUBQUERY FROM NESTED WHERE STATEMENT USE
@@ -1049,27 +169,28 @@ class NvSelect final {
                     order_by_(nullptr),
                     group_by_(nullptr),
                     subquery_where_parent_(where_obj),
+                    limit_offset_(nullptr),
                     dialect_(dialect) {}
 
   ~NvSelect() {}
 
-  DatabaseDialect Dialect() const {
+  DatabaseDialect Dialect() const override {
     return dialect_;
   }
 
-  uint32_t GetCurrentParamIndex() const {
+  uint32_t GetCurrentParamIndex() const override {
     return current_param_index_;
   }
 
-  void UpdateCurrentParamIndex(uint32_t current_param_index) {
+  void UpdateCurrentParamIndex(uint32_t current_param_index) override {
     current_param_index_ = current_param_index;
   }
 
-  std::string TableAlias() const {
+  std::string TableAlias() const override {
     return table_alias_;
   }
 
-  uint32_t GetBlockLevel() const {
+  uint32_t GetBlockLevel() const override {
     return level_;
   }
 
@@ -1445,10 +566,24 @@ class NvSelect final {
     return *this;
   }
 
+  LimitOffsetStatement<TParameterType>& LimitOffset() {
+    if (!limit_offset_) {
+      // explicit LimitOffsetStatement(
+      //     NvSelect<TParamType>* parent,
+      //     std::shared_ptr<std::vector<TParamType>> parameter_values,
+      //     uint32_t param_index, uint32_t level, DatabaseDialect dialect)
+
+      limit_offset_ = std::make_shared<LimitOffsetStatement<TParameterType>>(
+          this, parameter_values_, current_param_index_, level_, dialect_);
+    }
+
+    return *limit_offset_;
+  }
+
   /// @brief Build and Generate SQL string in this NvSelect object
   /// @param pretty_print
   /// @return
-  std::string GenerateQuery(bool pretty_print = false) const {
+  std::string GenerateQuery(bool pretty_print = false) const override {
     std::ostringstream query;
 
     // SELECT

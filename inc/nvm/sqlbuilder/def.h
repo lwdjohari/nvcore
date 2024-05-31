@@ -70,13 +70,28 @@ enum class DatabaseDialect { PostgreSQL = 1, Oracle = 2 };
 // cppcheck-suppress unknownMacro
 NVM_ENUM_CLASS_DISPLAY_TRAIT(DatabaseDialect)
 
-struct RecordTable {
-  std::string name;
-  std::optional<std::string> alias;
+// struct RecordTable {
+//   std::string name;
+//   std::optional<std::string> alias;
 
-  explicit RecordTable(const std::string& name,
-                       std::optional<std::string> alias = std::nullopt)
-                  : name(std::string(name)), alias(alias) {}
+//   explicit RecordTable(const std::string& name,
+//                        std::optional<std::string> alias = std::nullopt)
+//                   : name(std::string(name)), alias(alias) {}
+// };
+
+struct FieldPart {
+  std::string name;
+  std::optional<std::string> table_alias;
+
+  explicit FieldPart(const std::string& name,
+                     const std::optional<std::string>& alias = std::nullopt)
+                  : name(name), table_alias(alias) {}
+
+  explicit FieldPart(const FieldPart& other)
+                  : name(std::string(other.name)),
+                    table_alias(std::optional<std::string>(other.table_alias)) {}
+
+  
 };
 
 enum class FieldPinMode : uint16_t { None = 0, Beginning = 1, End = 2 };
@@ -138,6 +153,36 @@ enum class JoinDefMode {
 
 NVM_ENUM_CLASS_DISPLAY_TRAIT(JoinDefMode)
 
+struct RecordKey {
+  std::string table;
+  std::string field;
+  std::optional<std::string> table_alias;
+  bool initialize;
+
+  RecordKey()
+                  : table(),
+                    field(),
+                    table_alias(std::nullopt),
+                    initialize(false) {}
+
+  explicit RecordKey(const std::string& table, const std::string& field,
+                     const std::optional<std::string>& alias = std::nullopt)
+                  : table(std::string(table)),
+                    field(std::string(field)),
+                    table_alias(std::optional<std::string>(alias)),
+                    initialize(true) {}
+
+  std::string BuildField() const {
+    return table_alias.has_value() ? table_alias.value() + "." + field
+                                   : table + "." + field;
+  }
+
+  std::string BuildTableName() const {
+    return table_alias.has_value() ? table + " AS " + table_alias.value()
+                                   : table;
+  }
+};
+
 // Forward declaration WhereStatement
 template <typename TParameterType = DefaultPostgresParamType>
 class WhereStatement;
@@ -153,6 +198,23 @@ class GroupByStatement;
 // Forward declaration HavingByStatement
 template <typename TParameterType = DefaultPostgresParamType>
 class HavingByStatement;
+
+class NvSelectBasic {
+ public:
+  virtual ~NvSelectBasic() = default;
+
+  virtual DatabaseDialect Dialect() const = 0;
+
+  virtual uint32_t GetCurrentParamIndex() const = 0;
+
+  virtual void UpdateCurrentParamIndex(uint32_t current_param_index) = 0;
+
+  virtual std::string TableAlias() const = 0;
+
+  virtual uint32_t GetBlockLevel() const = 0;
+
+  virtual std::string GenerateQuery(bool pretty_print = false) const = 0;
+};
 
 // Forward declaration for NvSelect
 template <typename TParameterType = DefaultPostgresParamType>
