@@ -15,7 +15,7 @@
 
 namespace nvm::threads {
 
-    // Define a macro to conditionally use std::result_of for C++14 and
+// Define a macro to conditionally use std::result_of for C++14 and
 // std::invoke_result for C++17 and later
 #if __cplusplus < 201703L
 #define RESULT_OF(F, ...) \
@@ -40,6 +40,18 @@ class TaskPool;
 class AsyncExecutor;
 class AsyncTask;
 
+struct Task {
+  bool state;
+
+  Task() : state() {}
+  explicit Task(bool state) : state(state) {}
+
+  friend std::ostream& operator<<(std::ostream& os, const Task& task) {
+    os << "Task<void>(state=" << (task.state ? "true" : "false") << ")";
+    return os;
+  }
+};
+
 using TaskPoolPtr = std::shared_ptr<TaskPool>;
 using AsyncTaskFunc = std::shared_future<bool>;
 using AsyncTaskPromise = std::promise<bool>;
@@ -48,4 +60,3 @@ using AsyncTaskList = std::vector<AsyncTaskFunc>;
 using CircuitBreaker = std::function<bool(const AsyncTask&)>;
 
 }  // namespace nvm::threads
-

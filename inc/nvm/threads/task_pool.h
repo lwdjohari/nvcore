@@ -15,7 +15,6 @@
 #include <vector>
 
 #include "nvm/threads/def.h"
-#include "nvm/threads/promisizer.h"
 
 namespace nvm::threads {
 

@@ -12,7 +12,7 @@
 
 #include "nvm/threads/def.h"
 
-namespace nvm::threads {
+namespace nvm::threads::task {
 
 template <typename T>
 struct decay_custom {
@@ -108,20 +108,6 @@ std::vector<std::future<void>*> PackTaskPtr(
   return futures;
 }
 
-// template <typename FutureType>
-// std::vector<std::future<void>*> PackTaskPtr(
-//     const std::vector<
-//         std::pair<FutureType, std::shared_ptr<std::atomic<bool>>>>&
-//         futures_vector) {
-//   std::vector<std::future<void>*> futures;
-//   for (const auto& future_pair : futures_vector) {
-//     futures.push_back(reinterpret_cast<std::future<void>*>(
-//         &const_cast<std::pair<FutureType,
-//         std::shared_ptr<std::atomic<bool>>>>(
-//              future_pair)
-//              .first));
-//   }
-//   return futures;
-// }
 
-}  // namespace nvm::threads
+
+}  // namespace nvm::threads::task
