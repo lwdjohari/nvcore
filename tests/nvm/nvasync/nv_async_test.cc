@@ -6,6 +6,7 @@
 #include "nvm/dates/datetime.h"
 #include "nvm/stopwatch.h"
 #include "nvm/threads/async_executor.h"
+#include "nvm/threads/utils.h"
 using namespace nvm;
 
 TEST_CASE("nvasync-taskpool-promisizer", "[nvasync][async-executor]") {
@@ -34,13 +35,13 @@ TEST_CASE("nvasync-taskpool-promisizer", "[nvasync][async-executor]") {
     std::cout << "Work done" << std::endl;
   });
 
-  auto lambda3 = MakeTask(
-      [x](const std::string& str, int count) -> std::string {
-        std::this_thread::sleep_for(std::chrono::seconds(2));  // Simulate work
-        return str + " repeated " + std::to_string(count) +
-               " times, plus x: " + std::to_string(x);
-      },
-      "Hello", 3);
+  auto fn3 = [x](const std::string& str, int count) -> std::string {
+    std::this_thread::sleep_for(std::chrono::seconds(4));  // Simulate work
+    return str + " repeated " + std::to_string(count) +
+           " times, plus x: " + std::to_string(x);
+  };
+
+  auto lambda3 = MakeTask(fn3, "Hello", 3);
 
   auto lambda4 = MakeTask(
       [](double value) -> double {
@@ -49,12 +50,20 @@ TEST_CASE("nvasync-taskpool-promisizer", "[nvasync][async-executor]") {
       },
       2.5);
 
-  auto f1 = shared_pool->ExecuteTask(lambda1);
-  auto f2 = shared_pool->ExecuteTask(lambda2);
-  auto f3 = shared_pool->ExecuteTask(lambda3);
-  auto f4 = shared_pool->ExecuteTask(lambda4);
+  auto lambda5 = MakeTask(fn3, "Hello", 5);
+  auto lambda6 = MakeTask(fn3, "Hello", 6);
 
-  auto ptr = {&f1, &f2, &f3};
+  auto exec_time_theory =
+      utils::CalculateMaxExecutionTime({3, 3, 4, 1, 4, 4}, 4);
+
+  auto f1 = shared_pool->ExecuteTask(lambda1);  // 3 sec
+  auto f2 = shared_pool->ExecuteTask(lambda2);  // 3 sec
+  auto f3 = shared_pool->ExecuteTask(lambda3);  // 4 sec
+  auto f4 = shared_pool->ExecuteTask(lambda4);  // 1 sec
+  auto f5 = shared_pool->ExecuteTask(lambda5);  // 4 sec
+  auto f6 = shared_pool->ExecuteTask(lambda6);  // 4 sec
+
+  auto ptr = {&f1, &f2, &f3, &f4, &f5, &f6};
   auto futures = PackTaskPtr(ptr);
 
   // Wait for all tasks to complete
@@ -64,12 +73,18 @@ TEST_CASE("nvasync-taskpool-promisizer", "[nvasync][async-executor]") {
   auto res1 = std::move(lambda1.Future().get());
   auto res3 = std::move(lambda3.Future().get());
   auto res4 = std::move(lambda4.Future().get());
+  auto res5 = std::move(lambda5.Future().get());
+  auto res6 = std::move(lambda6.Future().get());
 
   std::cout << "Task-1:" << res1 << std::endl;
   std::cout << "Task-3:" << res3 << std::endl;
   std::cout << "Task-4:" << res4 << std::endl;
+  std::cout << "Task-5:" << res5 << std::endl;
+  std::cout << "Task-6:" << res6 << std::endl;
+  std::cout << "Theoritical Exec. Time  : " << exec_time_theory*1000 << " ms"
+            << std::endl;
 
-  std::cout << "Executed in: " << sw.ElapsedMilliseconds() << " ms"
+  std::cout << "Actual Exec. Time       : " << sw.ElapsedMilliseconds() << " ms"
             << std::endl;
 
   REQUIRE(true == true);
