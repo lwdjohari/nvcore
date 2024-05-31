@@ -4,7 +4,7 @@
 
 #include "catch2/catch_all.hpp"
 #include "nvm/dates/datetime.h"
-#include "nvm/nv_validator.h"
+#include "nvm/validators/nv_validator.h"
 
 using namespace nvm;
 
