@@ -20,9 +20,12 @@
 
 #pragma once
 
+#include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
+#include <string_view>
+#include <string>
 
 namespace nvm::types::utility {
 
