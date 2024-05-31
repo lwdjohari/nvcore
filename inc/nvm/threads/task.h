@@ -8,6 +8,17 @@
 
 namespace nvm::threads::task {
 
+// Helper function to convert arguments
+template <typename T>
+auto convert_arg(T&& arg) -> decltype(std::forward<T>(arg)) {
+  return std::forward<T>(arg);
+}
+
+auto convert_arg(const char* arg) -> std::string {
+  return std::string(arg);
+}
+
+
 // Helper function to get the future result for both std::future and
 // std::shared_future
 template <typename T>
@@ -31,19 +42,20 @@ struct ResultsCollector {
   template <std::size_t... I>
   auto collect_results(std::index_sequence<I...>) {
     return std::make_tuple(
-        std::move(get_future_result(std::get<I>(futures)))...);
+        std::move(convert_arg(get_future_result(std::get<I>(futures))))...);
   }
 
   auto collect() {
-    return collect_results( std::move( std::index_sequence_for<Futures...>{}));
+    return collect_results(std::index_sequence_for<Futures...>{});
   }
 };
 
 template <typename... Tasks>
-auto AsyncWaitAll(std::shared_ptr<class TaskPool> pool, bool debug,
+bool AsyncWaitAll(std::shared_ptr<class TaskPool> pool, bool debug,
                   Tasks&&... tasks) {
-  using ReturnType = std::tuple<decltype(tasks.Future().get())...>;
-
+  //   using ReturnType = std::tuple<decltype(tasks.Future().get())...>;
+//   using ReturnType =
+//       std::tuple<decltype(std::declval<Tasks>().Future().get())...>;
   // Vector to store pointers to the futures
   std::vector<std::pair<std::future<void>, std::shared_ptr<std::atomic_bool>>>
       futures;
@@ -63,17 +75,20 @@ auto AsyncWaitAll(std::shared_ptr<class TaskPool> pool, bool debug,
       future.first.wait();
   }
 
-  // Collect results from each task using ResultsCollector
-  ResultsCollector results_collector(tasks.Future()...);
-  ReturnType results = results_collector.collect();
+//   //Collect results from each task using ResultsCollector
+//   ResultsCollector results_collector(tasks.Future()...);
+//   ReturnType res = results_collector.collect();
 
   // Print results
+  //   ReturnType res = std::make_tuple( tasks.Future().get()...);
+//   ReturnType res =
+//   std::make_tuple(convert_arg(tasks.Future().get())...);
   if (debug) {
     auto print = [](auto& task) {
       std::cout << task.Future().get() << std::endl;
     };
     (print(tasks), ...);
   }
-  return std::move(results);
+  return true;
 }
 }  // namespace nvm::threads::task

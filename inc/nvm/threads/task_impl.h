@@ -79,6 +79,10 @@ class TaskWrapper {
   static std::string convert_arg(const char* arg) {
     return std::string(arg);
   }
+
+  //  static std::string convert_arg(const std::string arg) {
+  //   return std::string(arg);
+  // }
 };
 
 template <typename F, typename... Args>

@@ -40,7 +40,7 @@ TEST_CASE("nvasync-taskpool-promisizer", "[nvasync][async-executor]") {
   auto fn3 = [x](const std::string& str, int count) -> std::string {
     std::this_thread::sleep_for(std::chrono::seconds(4));  // Simulate work
     auto res = std::string(str);
-    return res + " repeated " + std::to_string(count) +
+    return std::move(res) + " repeated " + std::to_string(count) +
            " times, plus x: " + std::to_string(x);
   };
 
@@ -49,9 +49,10 @@ TEST_CASE("nvasync-taskpool-promisizer", "[nvasync][async-executor]") {
     return value * 3.14;
   };
 
+  std::string str = "Hello" ;
   auto lambda1 = task::MakeTask(fn1, 5);
   auto lambda2 = task::MakeTask(fn2);
-  auto lambda3 = task::MakeTask(fn3, "Hello", 3);
+  auto lambda3 = task::MakeTask(fn3, str, 3);
   auto lambda4 = task::MakeTask(fn4, 2.5);
   auto lambda5 = task::MakeTask(fn3, "Hello", 5);
   auto lambda6 = task::MakeTask(fn3, "Hello", 6);
@@ -62,13 +63,13 @@ TEST_CASE("nvasync-taskpool-promisizer", "[nvasync][async-executor]") {
   auto res = task::AsyncWaitAll(shared_pool, false, lambda1, lambda2, lambda3, lambda4,
                                 lambda5, lambda6);
 
-  auto res1 = std::get<0>(res);
-  auto res2 = std::get<1>(res);
+  auto res1 = lambda1.Future().get();
+  auto res2 = lambda2.Future().get();
 
-  auto res3 = std::move(std::get<2>(res));
-  auto res4 = std::get<3>(res);
-  auto res5 = std::get<4>(res);
-  auto res6 = std::get<5>(res);
+  auto res3 = lambda3.Future().get();
+  auto res4 = lambda4.Future().get();
+  auto res5 = lambda5.Future().get();
+  auto res6 = lambda6.Future().get();
 
   std::cout << "Task-1:" << res1 << std::endl;
   std::cout << "Task-3:" << res3 << std::endl;
