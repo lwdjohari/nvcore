@@ -53,6 +53,9 @@ struct Task {
 };
 
 using TaskPoolPtr = std::shared_ptr<TaskPool>;
+using AsyncTaskHandle =std::pair<std::future<void>, std::shared_ptr<std::atomic_bool>>;
+using AsyncTaskHandleList = std::vector<AsyncTaskHandle>;
+
 using AsyncTaskFunc = std::shared_future<bool>;
 using AsyncTaskPromise = std::promise<bool>;
 

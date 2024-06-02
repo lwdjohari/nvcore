@@ -4,6 +4,7 @@
 
 #include "catch2/catch_all.hpp"
 #include "nvm/dates/datetime.h"
+#include "nvm/maths/math.h"
 #include "nvm/stopwatch.h"
 #include "nvm/threads/task.h"
 #include "nvm/threads/utils.h"
@@ -15,12 +16,11 @@ TEST_CASE("nvasync-taskpool-promisizer", "[nvasync][async-executor]") {
   using NvTaskPool = nvm::threads::TaskPool;
   using Stopwatch = nvm::Stopwatch;
   using namespace nvm::threads;
+  using namespace nvm::maths;
 
   auto thread_num = 5;
-  auto pool =
-      NvTaskPool::Create(thread_num, 10);  // 5 threads, queue limit of 10 tasks
-  auto shared_pool = pool->Share();  // Create a shared pointer to the pool
-  Stopwatch sw;
+  std::string str = "Hello";
+  auto fp = Approx<double>(7.85);
 
   int x = 10;
 
@@ -49,29 +49,32 @@ TEST_CASE("nvasync-taskpool-promisizer", "[nvasync][async-executor]") {
     return value * 3.14;
   };
 
-  std::string str = "Hello" ;
-  auto lambda1 = task::MakeTask(fn1, 5);
-  auto lambda2 = task::MakeTask(fn2);
-  auto lambda3 = task::MakeTask(fn3, str, 3);
-  auto lambda4 = task::MakeTask(fn4, 2.5);
-  auto lambda5 = task::MakeTask(fn3, "Hello", 5);
-  auto lambda6 = task::MakeTask(fn3, "Hello", 6);
+  auto pool =
+      NvTaskPool::Create(thread_num, 10);  // 5 threads, queue limit of 10 tasks
+  auto shared_pool = pool->Share();  // Create a shared pointer to the pool
+  Stopwatch sw;
+
+  auto t1 = task::MakeTask(fn1, 5);
+  auto t2 = task::MakeTask(fn2);
+  auto t3 = task::MakeTask(fn3, str, 3);
+  auto t4 = task::MakeTask(fn4, 2.5);
+  auto t5 = task::MakeTask(fn3, "Hello", 5);
+  auto t6 = task::MakeTask(fn3, "Hello", 6);
 
   auto exec_time_theory =
       utils::CalculateMaxExecutionTime({3, 3, 4, 1, 4, 4}, thread_num);
 
-  auto res = task::AsyncWaitAll(shared_pool, false, lambda1, lambda2, lambda3, lambda4,
-                                lambda5, lambda6);
+  auto res = task::AsyncWaitAll(shared_pool, false, t1, t2, t3, t4, t5, t6);
 
-  auto res1 = lambda1.Future().get();
-  auto res2 = lambda2.Future().get();
-
-  auto res3 = lambda3.Future().get();
-  auto res4 = lambda4.Future().get();
-  auto res5 = lambda5.Future().get();
-  auto res6 = lambda6.Future().get();
+  auto res1 = t1.Result().get();
+  auto res2 = t2.Result().get();
+  auto res3 = t3.Result().get();
+  auto res4 = t4.Result().get();
+  auto res5 = t5.Result().get();
+  auto res6 = t6.Result().get();
 
   std::cout << "Task-1:" << res1 << std::endl;
+  std::cout << "Task-2:" << res2 << std::endl;
   std::cout << "Task-3:" << res3 << std::endl;
   std::cout << "Task-4:" << res4 << std::endl;
   std::cout << "Task-5:" << res5 << std::endl;
@@ -83,7 +86,12 @@ TEST_CASE("nvasync-taskpool-promisizer", "[nvasync][async-executor]") {
   std::cout << "Actual Exec. Time       : " << sw.ElapsedMilliseconds() << " ms"
             << std::endl;
 
-  REQUIRE(true == true);
+  REQUIRE(res1 == 10);
+  REQUIRE(res2.state == true);
+  REQUIRE(res3 == "Hello repeated 3 times, plus x: 10");
+  REQUIRE(res4 == fp);
+  REQUIRE(res5 == "Hello repeated 5 times, plus x: 10");
+  REQUIRE(res6 == "Hello repeated 6 times, plus x: 10");
 }
 
 TEST_CASE("nvasync-taskpool-test", "[nvasync][async-executor]") {

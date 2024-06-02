@@ -61,7 +61,7 @@ class TaskWrapper {
     }
   }
 
-  auto Future() -> std::shared_future<ReturnType> {
+  auto Result() -> std::shared_future<ReturnType> {
     return future_;
   }
 

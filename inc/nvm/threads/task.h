@@ -18,7 +18,6 @@ auto convert_arg(const char* arg) -> std::string {
   return std::string(arg);
 }
 
-
 // Helper function to get the future result for both std::future and
 // std::shared_future
 template <typename T>
@@ -36,7 +35,7 @@ template <typename... Futures>
 struct ResultsCollector {
   std::tuple<Futures...> futures;
 
-  ResultsCollector(Futures&&... futures)
+  explicit ResultsCollector(Futures&&... futures)
                   : futures(std::forward<Futures>(futures)...) {}
 
   template <std::size_t... I>
@@ -53,12 +52,11 @@ struct ResultsCollector {
 template <typename... Tasks>
 bool AsyncWaitAll(std::shared_ptr<class TaskPool> pool, bool debug,
                   Tasks&&... tasks) {
-  //   using ReturnType = std::tuple<decltype(tasks.Future().get())...>;
-//   using ReturnType =
-//       std::tuple<decltype(std::declval<Tasks>().Future().get())...>;
+  //   using ReturnType = std::tuple<decltype(tasks.Result().get())...>;
+  //   using ReturnType =
+  //       std::tuple<decltype(std::declval<Tasks>().Result().get())...>;
   // Vector to store pointers to the futures
-  std::vector<std::pair<std::future<void>, std::shared_ptr<std::atomic_bool>>>
-      futures;
+  AsyncTaskHandleList futures;
 
   // Lambda to execute and store the future of each task
   auto execute_task = [pool, &futures](auto& task) {
@@ -75,20 +73,46 @@ bool AsyncWaitAll(std::shared_ptr<class TaskPool> pool, bool debug,
       future.first.wait();
   }
 
-//   //Collect results from each task using ResultsCollector
-//   ResultsCollector results_collector(tasks.Future()...);
-//   ReturnType res = results_collector.collect();
+  //   //Collect results from each task using ResultsCollector
+  //   ResultsCollector results_collector(tasks.Result()...);
+  //   ReturnType res = results_collector.collect();
 
   // Print results
-  //   ReturnType res = std::make_tuple( tasks.Future().get()...);
-//   ReturnType res =
-//   std::make_tuple(convert_arg(tasks.Future().get())...);
+  //   ReturnType res = std::make_tuple( tasks.Result().get()...);
+  //   ReturnType res =
+  //   std::make_tuple(convert_arg(tasks.Result().get())...);
+
   if (debug) {
     auto print = [](auto& task) {
-      std::cout << task.Future().get() << std::endl;
+      std::cout << task.Result().get() << std::endl;
     };
     (print(tasks), ...);
   }
+
   return true;
+}
+
+template <typename... Tasks>
+auto AsyncNoWaitAll(std::shared_ptr<class TaskPool> pool, bool debug,
+                    Tasks&&... tasks) {
+  AsyncTaskHandleList futures;
+
+  // Lambda to execute and store the future of each task
+  auto execute_task = [pool, &futures](auto& task) {
+    auto result = pool->ExecuteTask(task);
+    futures.push_back(std::move(result));
+  };
+
+  // Expand the parameter pack and execute each task
+  (execute_task(tasks), ...);
+
+  if (debug) {
+    auto print = [](auto& task) {
+      std::cout << task.Result().get() << std::endl;
+    };
+    (print(tasks), ...);
+  }
+
+  return std::move(futures);
 }
 }  // namespace nvm::threads::task
