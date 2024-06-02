@@ -1,13 +1,33 @@
 cmake_minimum_required(VERSION 3.10)
 project(nvcore CXX)
 
-message( "NvCore PLUGINS v2")
-message( "-----------------------------")
+message(STATUS "NvCore Library")
+message(STATUS "-----------------------------")
 message(STATUS "NvCore LIB DIR:${CMAKE_CURRENT_SOURCE_DIR}")
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+include(ProjectCXX)
+
+if(NOT LIB_NV_CORE_CXX_VERSION)
+    set(LIB_NV_CORE_CXX_VERSION 17)
+endif()
+if(NOT DEFINED LIB_NV_CORE_CXX_STANDARD_REQUIRED)
+    set(LIB_NV_CORE_CXX_STANDARD_REQUIRED ON)
+endif()
+if(NOT DEFINED LIB_NV_CORE_CXX_EXTENSIONS)
+    set(LIB_NV_CORE_CXX_EXTENSIONS ON)
+endif()
+
+include(ProjectCXX)
+set(ISROOT FALSE)
+NV_DETECT_IS_ROOT_PROJECT(ISROOT)
+message(STATUS "NvRest Example Hello-world: ${ISROOT} ${LIB_NV_CORE_CXX_VERSION}")
+
+NV_PROPOGATE_CXX_OPTIONS(${LIB_NV_CORE_CXX_VERSION} ${LIB_NV_CORE_CXX_STANDARD_REQUIRED} ${LIB_NV_CORE_CXX_EXTENSIONS})
+set(CXX_FEATURE "")
+NV_GET_CXX_STD_FEATURE(${LIB_NV_CORE_CXX_VERSION} CXX_FEATURE)
+message(STATUS "CXX Feature: ${CXX_FEATURE}")
+
 set(ABSL_PROPAGATE_CXX_STD ON)
 
 option(LIB_NV_CORE_BUILD_DOC "Build documentation" OFF)
@@ -75,7 +95,7 @@ file(GLOB_RECURSE SOURCES_UTF8CPP CONFIGURE_DEPENDS
 
 add_library(utf8cpp ${SOURCES_UTF8CPP})
 set_target_properties(utf8cpp PROPERTIES LINKER_LANGUAGE CXX)
-target_compile_features(utf8cpp PUBLIC cxx_std_17)
+target_compile_features(utf8cpp PUBLIC ${CXX_FEATURE} )
 target_include_directories(utf8cpp
     PUBLIC
         deps/utfcpp/source/
@@ -122,7 +142,7 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES_NV_CORE} )
 target_link_libraries(${PROJECT_NAME}  
     utf8cpp )
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+target_compile_features(${PROJECT_NAME} PUBLIC ${CXX_FEATURE})
 
 if( USE_SYSTEM_TZ_DB OR MANUAL_TZ_DB )
     target_compile_definitions( ${PROJECT_NAME}  PRIVATE AUTO_DOWNLOAD=0 HAS_REMOTE_API=0 )
@@ -150,7 +170,7 @@ if(Sanitizers_FOUND)
 endif()
 
 target_link_libraries(${PROJECT_NAME}-test PRIVATE ${PROJECT_NAME} )
-target_compile_features(${PROJECT_NAME}-test PUBLIC cxx_std_17)
+target_compile_features(${PROJECT_NAME}-test PUBLIC ${CXX_FEATURE})
 target_include_directories("${PROJECT_NAME}-test"
     PUBLIC
         inc/
