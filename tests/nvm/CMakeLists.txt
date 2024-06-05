@@ -21,6 +21,7 @@ set(TEST_SOURCES
     struct_mapper_test.cc
     nvsql-policy/order_by_policy_test.cc
     nvasync/nv_async_test.cc
+    type_utility_test.cc
     # Add more test files if needed
 )
 

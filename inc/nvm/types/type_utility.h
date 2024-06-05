@@ -22,10 +22,10 @@
 
 #include <memory>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
-#include <string_view>
-#include <string>
 
 namespace nvm::types::utility {
 
@@ -57,16 +57,16 @@ constexpr bool is_smart_ptr_v() {
 /// @tparam T any type
 /// @return true if raw pointer type
 template <typename T>
-constexpr bool is_raw_ptr_v(){
-    return std::is_pointer_v<T>;
+constexpr bool is_raw_ptr_v() {
+  return std::is_pointer_v<T>;
 }
 
 /// @brief Get is T is std::optional<> type
 /// @tparam T any type
 /// @return true if std::optional<> type
 template <typename T>
-constexpr bool is_optional_v(){
-    return std::is_same_v<T, std::optional<T>>;
+constexpr bool is_optional_v() {
+  return std::is_same_v<T, std::optional<T>>;
 }
 
 // Helper type traits to check if a comparison operator exists
@@ -76,7 +76,7 @@ struct has_less_than : std::false_type {};
 template <typename T>
 struct has_less_than<
     T, std::void_t<decltype(std::declval<T>() < std::declval<T>())>>
-    : std::true_type {};
+                : std::true_type {};
 
 template <typename, typename = std::void_t<>>
 struct has_greater_than : std::false_type {};
@@ -84,7 +84,7 @@ struct has_greater_than : std::false_type {};
 template <typename T>
 struct has_greater_than<
     T, std::void_t<decltype(std::declval<T>() > std::declval<T>())>>
-    : std::true_type {};
+                : std::true_type {};
 
 template <typename, typename = std::void_t<>>
 struct has_less_equal : std::false_type {};
@@ -92,7 +92,7 @@ struct has_less_equal : std::false_type {};
 template <typename T>
 struct has_less_equal<
     T, std::void_t<decltype(std::declval<T>() <= std::declval<T>())>>
-    : std::true_type {};
+                : std::true_type {};
 
 template <typename, typename = std::void_t<>>
 struct has_greater_equal : std::false_type {};
@@ -100,7 +100,7 @@ struct has_greater_equal : std::false_type {};
 template <typename T>
 struct has_greater_equal<
     T, std::void_t<decltype(std::declval<T>() >= std::declval<T>())>>
-    : std::true_type {};
+                : std::true_type {};
 
 template <typename, typename = std::void_t<>>
 struct has_equal : std::false_type {};
@@ -108,7 +108,7 @@ struct has_equal : std::false_type {};
 template <typename T>
 struct has_equal<T,
                  std::void_t<decltype(std::declval<T>() == std::declval<T>())>>
-    : std::true_type {};
+                : std::true_type {};
 
 template <typename, typename = std::void_t<>>
 struct has_not_equal : std::false_type {};
@@ -116,7 +116,7 @@ struct has_not_equal : std::false_type {};
 template <typename T>
 struct has_not_equal<
     T, std::void_t<decltype(std::declval<T>() != std::declval<T>())>>
-    : std::true_type {};
+                : std::true_type {};
 
 /// @brief Check if type have logical comparable ==,!=,<,<=,>,>=
 template <typename T>
@@ -142,27 +142,27 @@ template <typename T>
 using is_logical__lte_gte_comparator =
     std::conjunction<has_less_equal<T>, has_greater_equal<T>>;
 
-/// @brief 
-/// @tparam T 
-/// @return 
+/// @brief
+/// @tparam T
+/// @return
 template <typename T>
 constexpr bool is_string_and_string_view_v() {
   return (std::is_same_v<T, std::string> ||
           std::is_same_v<T, std::string_view>);
 }
 
-/// @brief 
-/// @tparam T 
-/// @return 
+/// @brief
+/// @tparam T
+/// @return
 template <typename T>
 constexpr bool is_string_and_string_view_optional_v() {
   return (std::is_same_v<T, std::optional<std::string>> ||
           std::is_same_v<T, std::optional<std::string_view>>);
 }
 
-/// @brief 
-/// @tparam T 
-/// @return 
+/// @brief
+/// @tparam T
+/// @return
 template <typename T>
 constexpr bool is_string_and_string_view_smart_ptr_v() {
   return (std::is_same_v<T, std::unique_ptr<std::string>> ||
@@ -173,22 +173,257 @@ constexpr bool is_string_and_string_view_smart_ptr_v() {
           std::is_same_v<T, std::weak_ptr<std::string_view>>);
 }
 
-/// @brief 
-/// @tparam T 
-/// @return 
+/// @brief
+/// @tparam T
+/// @return
 template <typename T>
 constexpr bool is_string_and_string_view_family_v() {
   return (is_string_and_string_view_v<T> ||
           is_string_and_string_view_optional_v<T>());
 }
 
-/// @brief 
-/// @tparam T 
-/// @return 
+/// @brief
+/// @tparam T
+/// @return
 template <typename T>
 constexpr bool is_string_and_string_view_family_ptr_v() {
   return (is_string_and_string_view_family_v<T>() ||
           is_string_and_string_view_smart_ptr_v<T>());
 }
+
+// template <typename T, typename = std::void_t<>>
+// struct has_static_kComponent : std::false_type {};
+
+// template <typename T>
+// struct has_static_kComponent<T, std::void_t<decltype(T::kComponent)>>
+//                 : std::true_type {};
+
+// Check if TType inherited from TBaseType
+
+template <typename TType, typename TBaseType, typename = std::void_t<>>
+struct has_base_of : std::false_type {};
+
+// Specialization that uses SFINAE to set the value to true if TType is derived
+// from TBaseType
+template <typename TType, typename TBaseType>
+struct has_base_of<TType, TBaseType,
+                   std::void_t<typename std::enable_if<
+                       std::is_base_of<TBaseType, TType>::value>::type>>
+                : std::true_type {};
+
+// C++17 and later version
+#if __cplusplus >= 201703L
+template <typename TType, typename TBaseType>
+constexpr bool is_has_base_of_v = has_base_of<TType, TBaseType>::value;
+#else
+constexpr bool is_has_base_of_v = has_base_of<TType, TBaseType>::value;
+#endif
+
+// Helper to determine if a type T is constructible with exact argument forms
+// using SFINAE
+template <typename T, typename = void, typename... Args>
+struct is_constructible_helper : std::false_type {};
+
+template <typename T, typename... Args>
+struct is_constructible_helper<
+    T, std::enable_if_t<std::is_constructible<T, Args...>::value>, Args...>
+                : std::true_type {};
+
+// template <typename T, typename... Args>
+// struct is_constructible_helper<T,
+// std::void_t<decltype(T(std::declval<Args>()...))>, Args...>
+//     : std::conjunction<std::is_constructible<T, Args...>, std::is_same<Args,
+//     Args>...> {};
+
+template <typename T, typename... Args>
+using is_constructible = is_constructible_helper<T, void, Args...>;
+
+// Define is_constructible_v based on the C++ standard version
+#if __cplusplus >= 201703L
+// Compile-time check if the type can be constructed using defined constructor.
+//
+// Example
+//
+// ```cpp
+//
+// class BasicComponent {
+// public:
+//   BasicComponent(){}
+//   explicit BasicComponent(int, double) {}
+//   }
+// };
+//
+// STATIC_REQUIRE(is_constructible_v<BasicComponent>);
+// STATIC_REQUIRE(is_constructible_v<BasicComponent, int, double>);
+// STATIC_REQUIRE_FALSE(is_constructible_v<BasicComponent, int, std::string>);
+//
+// // This is fundamental limitation
+// // implicit conversion still happen, it up to dev to avoid this UB
+// STATIC_REQUIRE(is_constructible_v<BasicComponent, double, int>);
+// ```
+template <typename T, typename... Args>
+constexpr bool is_constructible_v = is_constructible<T, Args...>::value;
+#else
+// Compile-time check if the type can be constructed using defined constructor.
+//
+// Example
+//
+// ```cpp
+//
+// class BasicComponent {
+// public:
+//   BasicComponent(){}
+//   explicit BasicComponent(int, double) {}
+//   }
+// };
+//
+// STATIC_REQUIRE(is_constructible_v<BasicComponent>);
+// STATIC_REQUIRE(is_constructible_v<BasicComponent, int, double>);
+// STATIC_REQUIRE_FALSE(is_constructible_v<BasicComponent, int, std::string>);
+//
+// // This is fundamental limitation
+// // implicit conversion still happen, it up to dev to avoid this UB
+// STATIC_REQUIRE(is_constructible_v<BasicComponent, double, int>);
+// ```
+template <typename T, typename... Args>
+constexpr bool is_constructible_v() {
+  return is_constructible<T, Args...>::value;
+}
+
+// Compile-time check if the type can be constructed using defined constructor.
+//
+// Example
+//
+// ```cpp
+//
+// class BasicComponent {
+// public:
+//   BasicComponent(){}
+//   explicit BasicComponent(int, double) {}
+//   }
+// };
+//
+// STATIC_REQUIRE(is_constructible_v<BasicComponent>);
+// STATIC_REQUIRE(is_constructible_v<BasicComponent, int, double>);
+// STATIC_REQUIRE_FALSE(is_constructible_v<BasicComponent, int, std::string>);
+//
+// // This is fundamental limitation
+// // implicit conversion still happen, it up to dev to avoid this UB
+// STATIC_REQUIRE(is_constructible_v<BasicComponent, double, int>);
+// ```
+#define is_constructible_v(T, ...) is_constructible_v<T, __VA_ARGS__>()
+#endif
+
+// Macro to define a trait that checks for a specific member function & exact
+// signature.
+// Current implementation not yet supported const T* & T*.
+//
+// Example:
+// ```cpp
+// struct A {
+// std::string generate(int) {
+//     return "Print A";
+// }
+// std::string toString(int) {
+//     return "A";
+// }
+// void Print() {}
+// const int* PrintCache() const {
+//     static int x = 0;
+//     return &x;
+// }
+// int& PrintIndex() {
+//     static int x = 0;
+//     return x;
+// }
+// };
+//
+// NVM_DEFINE_HAS_MEMBER(nvm, has_print, Print)
+// NVM_DEFINE_HAS_MEMBER(nvm, has_print_index, PrintIndex)
+// NVM_DEFINE_HAS_MEMBER(nvm, has_to_string, toString)
+// NVM_DEFINE_HAS_MEMBER(nvm, has_generate, generate)
+// NVM_DEFINE_HAS_MEMBER(nvm, has_print_cache, PrintCache)
+//
+// #define STATIC_REQUIRE(...) static_assert(__VA_ARGS__, #__VA_ARGS__)
+// #define STATIC_REQUIRE_FALSE(...) static_assert(!(__VA_ARGS__), #__VA_ARGS__)
+//
+// void test_case() {
+//     STATIC_REQUIRE_FALSE(nvm_has_print<A, std::string(int)>::value);
+//     STATIC_REQUIRE(nvm_has_to_string<A, std::string(int)>::value);
+//     STATIC_REQUIRE(nvm_has_generate<A, std::string(int)>::value);
+//     STATIC_REQUIRE(nvm_has_print<A, void()>::value);
+//     STATIC_REQUIRE(nvm_has_print_cache<A, const int*() const>::value);
+//     STATIC_REQUIRE(nvm_has_print_index<A, int&()>::value);
+// }
+// ```
+#define NVM_DEFINE_HAS_MEMBER(PREFIX, NAME, FUNC)                             \
+  template <typename TClass, typename T>                                      \
+  struct PREFIX##_##NAME {                                                    \
+    static_assert(std::integral_constant<T, false>::value,                    \
+                  "Second template parameter needs to be of function type."); \
+  };                                                                          \
+                                                                              \
+  template <typename TClass, typename Ret, typename... Args>                  \
+  struct PREFIX##_##NAME<TClass, Ret(Args...)> {                              \
+   private:                                                                   \
+    template <typename T>                                                     \
+    static constexpr auto check(T*)                                           \
+        -> decltype(static_cast<Ret (T::*)(Args...)>(&T::FUNC),               \
+                    std::true_type{});                                        \
+                                                                              \
+    template <typename T>                                                     \
+    static constexpr auto check_const(T*)                                     \
+        -> decltype(static_cast<Ret (T::*)(Args...) const>(&T::FUNC),         \
+                    std::true_type{});                                        \
+                                                                              \
+    template <typename T>                                                     \
+    static constexpr auto check_ptr(T*)                                       \
+        -> decltype(static_cast<Ret (T::*)(Args...)>(&T::FUNC),               \
+                    std::true_type{});                                        \
+                                                                              \
+    template <typename T>                                                     \
+    static constexpr auto check_ptr_const(T*)                                 \
+        -> decltype(static_cast<Ret (T::*)(Args...) const>(&T::FUNC),         \
+                    std::true_type{});                                        \
+                                                                              \
+    template <typename T>                                                     \
+    static constexpr auto check_ref(T*)                                       \
+        -> decltype(static_cast<Ret (T::*)(Args...)>(&T::FUNC),               \
+                    std::true_type{});                                        \
+                                                                              \
+    template <typename T>                                                     \
+    static constexpr auto check_ref_const(T*)                                 \
+        -> decltype(static_cast<Ret (T::*)(Args...) const>(&T::FUNC),         \
+                    std::true_type{});                                        \
+                                                                              \
+    template <typename>                                                       \
+    static constexpr std::false_type check(...);                              \
+    template <typename>                                                       \
+    static constexpr std::false_type check_const(...);                        \
+    template <typename>                                                       \
+    static constexpr std::false_type check_ptr(...);                          \
+    template <typename>                                                       \
+    static constexpr std::false_type check_ptr_const(...);                    \
+    template <typename>                                                       \
+    static constexpr std::false_type check_ref(...);                          \
+    template <typename>                                                       \
+    static constexpr std::false_type check_ref_const(...);                    \
+                                                                              \
+    using type = decltype(check<TClass>(0));                                  \
+    using type_const = decltype(check_const<TClass>(0));                      \
+    using type_ptr = decltype(check_ptr<TClass>(0));                          \
+    using type_ptr_const = decltype(check_ptr_const<TClass>(0));              \
+    using type_ref = decltype(check_ref<TClass>(0));                          \
+    using type_ref_const = decltype(check_ref_const<TClass>(0));              \
+                                                                              \
+   public:                                                                    \
+    static constexpr bool value =                                             \
+        std::is_same<type, std::true_type>::value ||                          \
+        std::is_same<type_const, std::true_type>::value ||                    \
+        std::is_same<type_ptr, std::true_type>::value ||                      \
+        std::is_same<type_ptr_const, std::true_type>::value ||                \
+        std::is_same<type_ref, std::true_type>::value ||                      \
+        std::is_same<type_ref_const, std::true_type>::value;                  \
+  };
 
 }  // namespace nvm::types::utility
