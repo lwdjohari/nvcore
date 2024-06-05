@@ -57,6 +57,7 @@ struct A {
 };
 
 // Define traits to check for specific member functions
+// cppcheck-suppress unknownMacro
 NVM_DEFINE_HAS_MEMBER(nvm, has_print, Print)
 NVM_DEFINE_HAS_MEMBER(nvm, has_print_index, PrintIndex)
 NVM_DEFINE_HAS_MEMBER(nvm, has_to_string, toString)
