@@ -111,13 +111,13 @@ namespace nvm {
                 "<=, =>");
 
 template <typename Enum, typename Lambda>
-std::string to_string(Enum e, Lambda lambda) {
+std::string enum_to_string_impl(Enum e, Lambda lambda) {
   return lambda(e);
 }
 
 #define NVM_ENUM_TO_STRING_FORMATTER(EnumType, ...)                  \
-  template <>                                                        \
-  std::string to_string<EnumType>(EnumType e) {                      \
+                                                                     \
+  inline std::string ToStringEnum##EnumType(EnumType e) {            \
     static const auto toStringFunc = [](EnumType e) -> std::string { \
       switch (e) {                                                   \
         __VA_ARGS__                                                  \
@@ -125,8 +125,7 @@ std::string to_string(Enum e, Lambda lambda) {
           throw std::invalid_argument("Unsupported enum value");     \
       }                                                              \
     };                                                               \
-    return nvm::to_string(e, toStringFunc);                               \
+    return nvm::enum_to_string_impl(e, toStringFunc);                \
   }
-
 }  // namespace nvm
 #endif
