@@ -45,13 +45,13 @@ namespace nvm {
   }
 
 #define NVM_CONST_DELETE_COPY_AND_DEFAULT_MOVE(Type) \
-  Type(const Type &) = delete;                       \
-  Type &operator=(const Type &) = delete;            \
-  Type(Type &&) noexcept = default;                  \
-  Type &operator=(Type &&) noexcept = default;
+  Type(const Type&) = delete;                        \
+  Type& operator=(const Type&) = delete;             \
+  Type(Type&&) noexcept = default;                   \
+  Type& operator=(Type&&) noexcept = default;
 
 #define NVM_ENUM_CLASS_DISPLAY_TRAIT(E)                                  \
-  inline std::ostream &operator<<(std::ostream &os, E e) {               \
+  inline std::ostream& operator<<(std::ostream& os, E e) {               \
     return os << static_cast<typename std::underlying_type<E>::type>(e); \
   }
 
@@ -109,6 +109,24 @@ namespace nvm {
   static_assert(nvm::types::utility::is_logical__comparable<T>::value, \
                 "Type T must support all comparison operators: "       \
                 "<=, =>");
+
+template <typename Enum, typename Lambda>
+std::string to_string(Enum e, Lambda lambda) {
+  return lambda(e);
+}
+
+#define NVM_ENUM_TO_STRING_FORMATTER(EnumType, ...)                  \
+  template <>                                                        \
+  std::string to_string<EnumType>(EnumType e) {                      \
+    static const auto toStringFunc = [](EnumType e) -> std::string { \
+      switch (e) {                                                   \
+        __VA_ARGS__                                                  \
+        default:                                                     \
+          throw std::invalid_argument("Unsupported enum value");     \
+      }                                                              \
+    };                                                               \
+    return to_string(e, toStringFunc);                               \
+  }
 
 }  // namespace nvm
 #endif
