@@ -38,39 +38,76 @@ class ReferenceComponent {
   explicit ReferenceComponent(int&&) {}
 };
 
-struct A {
-  std::string generate(int) {
-    return "Print A";
+
+// Test cases
+class A {
+ public:
+  void PrintCache() const {
+    std::cout << "PrintCache without arguments" << std::endl;
   }
-  std::string toString(int) {
-    return "A";
-  }
-  void Print() {}
-  const int* PrintCache() const {
-    static int x = 0;
-    return &x;
-  }
-  int& PrintIndex() {
-    static int x = 0;
-    return x;
+  void PrintCache(int value) const {
+    std::cout << "PrintCache with argument: " << value << std::endl;
   }
 };
 
-// Define traits to check for specific member functions
+struct B {
+  void PrintCache(int) const;
+};
+
+struct C {
+  double PrintCache(double);
+};
+
+struct D {
+  void PrintCache(const int&);
+};
+
+struct E {
+  void PrintCache(int&&);
+};
+
+struct F {
+  void PrintCache(int*);
+};
+
+struct G {
+  void PrintCache(const int&) const;
+};
+
+struct H {
+  void PrintCache(const int&&) const;
+};
+
+struct I {
+  void PrintCache(const int*);
+};
+
+struct J {
+  const int* PrintCache() const;
+};
+
+struct K {
+  const int PrintCache() const;
+};
+
 // cppcheck-suppress unknownMacro
-NVM_DEFINE_HAS_MEMBER(nvm, has_print, Print)
-NVM_DEFINE_HAS_MEMBER(nvm, has_print_index, PrintIndex)
-NVM_DEFINE_HAS_MEMBER(nvm, has_to_string, toString)
-NVM_DEFINE_HAS_MEMBER(nvm, has_generate, generate)
-NVM_DEFINE_HAS_MEMBER(nvm, has_print_cache, PrintCache)
+NVM_DEFINE_TYPE_HAS_METHOD(nvm, has_print_cache, PrintCache)
+
+// Correct usage
 
 TEST_CASE("[meta-has_method] has_method tests", "[meta-method]") {
-  STATIC_REQUIRE_FALSE(nvm_has_print<A, std::string(int)>::value);
-  STATIC_REQUIRE(nvm_has_to_string<A, std::string(int)>::value);
-  STATIC_REQUIRE(nvm_has_generate<A, std::string(int)>::value);
-  STATIC_REQUIRE(nvm_has_print<A, void()>::value);
-  //   STATIC_REQUIRE (nvm_has_print_cache<A, const int*() const>::value );
-  STATIC_REQUIRE(nvm_has_print_index<A, int&()>::value);
+  STATIC_REQUIRE(nvm_has_print_cache<A, void()>::value);
+  STATIC_REQUIRE(nvm_has_print_cache<A, void(int)>::value);
+  STATIC_REQUIRE(nvm_has_print_cache<B, void(int)>::value);
+  STATIC_REQUIRE(nvm_has_print_cache<C, double(double)>::value);
+  STATIC_REQUIRE(nvm_has_print_cache<D, void(const int&)>::value);
+  STATIC_REQUIRE(nvm_has_print_cache<E, void(int&&)>::value);
+  STATIC_REQUIRE(nvm_has_print_cache<F, void(int*)>::value);
+  STATIC_REQUIRE(nvm_has_print_cache<G, void(const int&)>::value);
+  STATIC_REQUIRE(nvm_has_print_cache<H, void(const int&&)>::value);
+  STATIC_REQUIRE(nvm_has_print_cache<I, void(const int*)>::value);
+  STATIC_REQUIRE(nvm_has_print_cache<J, const int*()>::value);
+  STATIC_REQUIRE(nvm_has_print_cache<K, const int()>::value);
 }
 
 TEST_CASE("[meta-has_base_of] has_base_of tests", "[meta-has_base_of]") {

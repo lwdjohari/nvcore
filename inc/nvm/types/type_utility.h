@@ -316,7 +316,10 @@ constexpr bool is_constructible_v() {
 
 // Macro to define a trait that checks for a specific member function & exact
 // signature.
-// Current implementation not yet supported const T* & T*.
+// LIMITATION:
+// For declared Func() const, it will detect both Func() & Func() const,
+// for any Func const mismatch constness calling,
+// it's up to compiler to catch during compilers   
 //
 // Example:
 // ```cpp
@@ -338,11 +341,11 @@ constexpr bool is_constructible_v() {
 // }
 // };
 //
-// NVM_DEFINE_HAS_MEMBER(nvm, has_print, Print)
-// NVM_DEFINE_HAS_MEMBER(nvm, has_print_index, PrintIndex)
-// NVM_DEFINE_HAS_MEMBER(nvm, has_to_string, toString)
-// NVM_DEFINE_HAS_MEMBER(nvm, has_generate, generate)
-// NVM_DEFINE_HAS_MEMBER(nvm, has_print_cache, PrintCache)
+// NVM_DEFINE_TYPE_HAS_METHOD(nvm, has_print, Print)
+// NVM_DEFINE_TYPE_HAS_METHOD(nvm, has_print_index, PrintIndex)
+// NVM_DEFINE_TYPE_HAS_METHOD(nvm, has_to_string, toString)
+// NVM_DEFINE_TYPE_HAS_METHOD(nvm, has_generate, generate)
+// NVM_DEFINE_TYPE_HAS_METHOD(nvm, has_print_cache, PrintCache)
 //
 // #define STATIC_REQUIRE(...) static_assert(__VA_ARGS__, #__VA_ARGS__)
 // #define STATIC_REQUIRE_FALSE(...) static_assert(!(__VA_ARGS__), #__VA_ARGS__)
@@ -352,78 +355,214 @@ constexpr bool is_constructible_v() {
 //     STATIC_REQUIRE(nvm_has_to_string<A, std::string(int)>::value);
 //     STATIC_REQUIRE(nvm_has_generate<A, std::string(int)>::value);
 //     STATIC_REQUIRE(nvm_has_print<A, void()>::value);
-//     STATIC_REQUIRE(nvm_has_print_cache<A, const int*() const>::value);
+//     STATIC_REQUIRE(nvm_has_print_cache<A, const int*()>::value);
 //     STATIC_REQUIRE(nvm_has_print_index<A, int&()>::value);
 // }
 // ```
-#define NVM_DEFINE_HAS_MEMBER(PREFIX, NAME, FUNC)                             \
-  template <typename TClass, typename T>                                      \
-  struct PREFIX##_##NAME {                                                    \
-    static_assert(std::integral_constant<T, false>::value,                    \
-                  "Second template parameter needs to be of function type."); \
-  };                                                                          \
-                                                                              \
-  template <typename TClass, typename Ret, typename... Args>                  \
-  struct PREFIX##_##NAME<TClass, Ret(Args...)> {                              \
-   private:                                                                   \
-    template <typename T>                                                     \
-    static constexpr auto check(T*)                                           \
-        -> decltype(static_cast<Ret (T::*)(Args...)>(&T::FUNC),               \
-                    std::true_type{});                                        \
-                                                                              \
-    template <typename T>                                                     \
-    static constexpr auto check_const(T*)                                     \
-        -> decltype(static_cast<Ret (T::*)(Args...) const>(&T::FUNC),         \
-                    std::true_type{});                                        \
-                                                                              \
-    template <typename T>                                                     \
-    static constexpr auto check_ptr(T*)                                       \
-        -> decltype(static_cast<Ret (T::*)(Args...)>(&T::FUNC),               \
-                    std::true_type{});                                        \
-                                                                              \
-    template <typename T>                                                     \
-    static constexpr auto check_ptr_const(T*)                                 \
-        -> decltype(static_cast<Ret (T::*)(Args...) const>(&T::FUNC),         \
-                    std::true_type{});                                        \
-                                                                              \
-    template <typename T>                                                     \
-    static constexpr auto check_ref(T*)                                       \
-        -> decltype(static_cast<Ret (T::*)(Args...)>(&T::FUNC),               \
-                    std::true_type{});                                        \
-                                                                              \
-    template <typename T>                                                     \
-    static constexpr auto check_ref_const(T*)                                 \
-        -> decltype(static_cast<Ret (T::*)(Args...) const>(&T::FUNC),         \
-                    std::true_type{});                                        \
-                                                                              \
-    template <typename>                                                       \
-    static constexpr std::false_type check(...);                              \
-    template <typename>                                                       \
-    static constexpr std::false_type check_const(...);                        \
-    template <typename>                                                       \
-    static constexpr std::false_type check_ptr(...);                          \
-    template <typename>                                                       \
-    static constexpr std::false_type check_ptr_const(...);                    \
-    template <typename>                                                       \
-    static constexpr std::false_type check_ref(...);                          \
-    template <typename>                                                       \
-    static constexpr std::false_type check_ref_const(...);                    \
-                                                                              \
-    using type = decltype(check<TClass>(0));                                  \
-    using type_const = decltype(check_const<TClass>(0));                      \
-    using type_ptr = decltype(check_ptr<TClass>(0));                          \
-    using type_ptr_const = decltype(check_ptr_const<TClass>(0));              \
-    using type_ref = decltype(check_ref<TClass>(0));                          \
-    using type_ref_const = decltype(check_ref_const<TClass>(0));              \
-                                                                              \
-   public:                                                                    \
-    static constexpr bool value =                                             \
-        std::is_same<type, std::true_type>::value ||                          \
-        std::is_same<type_const, std::true_type>::value ||                    \
-        std::is_same<type_ptr, std::true_type>::value ||                      \
-        std::is_same<type_ptr_const, std::true_type>::value ||                \
-        std::is_same<type_ref, std::true_type>::value ||                      \
-        std::is_same<type_ref_const, std::true_type>::value;                  \
+#define NVM_DEFINE_TYPE_HAS_METHOD(PREFIX, TEMPLATE_NAME, FUNC)                \
+  template <typename, typename T>                                         \
+  struct PREFIX##_##TEMPLATE_NAME : std::false_type {};                   \
+                                                                          \
+  template <typename TClass, typename Ret, typename... Args>              \
+  struct PREFIX##_##TEMPLATE_NAME<TClass, Ret(Args...)> {                 \
+   private:                                                               \
+    template <typename U>                                                 \
+    static auto test(U*)                                                  \
+        -> decltype(static_cast<Ret (U::*)(Args...)>(&U::FUNC),           \
+                    std::true_type{}) {                                   \
+      return std::true_type{};                                            \
+    }                                                                     \
+                                                                          \
+    template <typename>                                                   \
+    static std::false_type test(...);                                     \
+                                                                          \
+    template <typename U>                                                 \
+    static auto test_const(U*)                                            \
+        -> decltype(static_cast<Ret (U::*)(Args...) const>(&U::FUNC),     \
+                    std::true_type{}) {                                   \
+      return std::true_type{};                                            \
+    }                                                                     \
+                                                                          \
+    template <typename>                                                   \
+    static std::false_type test_const(...);                               \
+                                                                          \
+    template <typename U>                                                 \
+    static auto test_ptr(U*)                                              \
+        -> decltype(static_cast<Ret (U::*)(std::add_pointer_t<Args>...)>( \
+                        &U::FUNC),                                        \
+                    std::true_type{}) {                                   \
+      return std::true_type{};                                            \
+    }                                                                     \
+                                                                          \
+    template <typename>                                                   \
+    static std::false_type test_ptr(...);                                 \
+                                                                          \
+    template <typename U>                                                 \
+    static auto test_ptr_const(U*)                                        \
+        -> decltype(static_cast<Ret (U::*)(std::add_pointer_t<Args>...)   \
+                                    const>(&U::FUNC),                     \
+                    std::true_type{}) {                                   \
+      return std::true_type{};                                            \
+    }                                                                     \
+                                                                          \
+    template <typename>                                                   \
+    static std::false_type test_ptr_const(...);                           \
+                                                                          \
+    template <typename U>                                                 \
+    static auto test_ref(U*)                                              \
+        -> decltype(static_cast<Ret (U::*)(                               \
+                        std::add_lvalue_reference_t<Args>...)>(&U::FUNC), \
+                    std::true_type{}) {                                   \
+      return std::true_type{};                                            \
+    }                                                                     \
+                                                                          \
+    template <typename>                                                   \
+    static std::false_type test_ref(...);                                 \
+                                                                          \
+    template <typename U>                                                 \
+    static auto test_ref_const(U*)                                        \
+        -> decltype(static_cast<Ret (U::*)(                               \
+                        std::add_lvalue_reference_t<Args>...) const>(     \
+                        &U::FUNC),                                        \
+                    std::true_type{}) {                                   \
+      return std::true_type{};                                            \
+    }                                                                     \
+                                                                          \
+    template <typename>                                                   \
+    static std::false_type test_ref_const(...);                           \
+                                                                          \
+    template <typename U>                                                 \
+    static auto test_rref(U*)                                             \
+        -> decltype(static_cast<Ret (U::*)(                               \
+                        std::add_rvalue_reference_t<Args>...)>(&U::FUNC), \
+                    std::true_type{}) {                                   \
+      return std::true_type{};                                            \
+    }                                                                     \
+                                                                          \
+    template <typename>                                                   \
+    static std::false_type test_rref(...);                                \
+                                                                          \
+    template <typename U>                                                 \
+    static auto test_rref_const(U*)                                       \
+        -> decltype(static_cast<Ret (U::*)(                               \
+                        std::add_rvalue_reference_t<Args>...) const>(     \
+                        &U::FUNC),                                        \
+                    std::true_type{}) {                                   \
+      return std::true_type{};                                            \
+    }                                                                     \
+                                                                          \
+    template <typename>                                                   \
+    static std::false_type test_rref_const(...);                          \
+                                                                          \
+    using result = std::integral_constant<                                \
+        bool, decltype(test_const<TClass>(nullptr))::value ||             \
+                  decltype(test<TClass>(nullptr))::value ||               \
+                  decltype(test_ptr<TClass>(nullptr))::value ||           \
+                  decltype(test_ptr_const<TClass>(nullptr))::value ||     \
+                  decltype(test_ref<TClass>(nullptr))::value ||           \
+                  decltype(test_ref_const<TClass>(nullptr))::value ||     \
+                  decltype(test_rref<TClass>(nullptr))::value ||          \
+                  decltype(test_rref_const<TClass>(nullptr))::value>;     \
+                                                                          \
+   public:                                                                \
+    static constexpr bool value = result::value;                          \
   };
+
+//  template<class T>
+// struct is_pointer_to_const_member_function : std::false_type {};
+
+// template<class R, class T, class... Args>
+// struct is_pointer_to_const_member_function<R (T::*)(Args...) const> :
+// std::true_type {};
+
+// template<class R, class T, class... Args>
+// struct is_pointer_to_const_member_function<R (T::*)(Args...) const &> :
+// std::true_type {};
+
+// template<class R, class T, class... Args>
+// struct is_pointer_to_const_member_function<R (T::*)(Args...) const &&> :
+// std::true_type {};
+
+// template<class R, class T, class... Args>
+// struct is_pointer_to_const_member_function<R (T::*)(Args..., ...) const> :
+// std::true_type {};
+
+// template<class R, class T, class... Args>
+// struct is_pointer_to_const_member_function<R (T::*)(Args..., ...) const &>
+// : std::true_type {};
+
+// template<class R, class T, class... Args>
+// struct is_pointer_to_const_member_function<R (T::*)(Args..., ...) const &&>
+// : std::true_type {};
+
+// #define NVM_DEFINE_TYPE_HAS_METHOD(PREFIX, NAME, FUNC)                             \
+//   template <typename TClass, typename T>                                      \
+//   struct PREFIX##_##NAME {                                                    \
+//     static_assert(std::integral_constant<T, false>::value,                    \
+//                   "Second template parameter needs to be of function type."); \
+//   };                                                                          \
+//                                                                               \
+//   template <typename TClass, typename Ret, typename... Args>                  \
+//   struct PREFIX##_##NAME<TClass, Ret(Args...)> {                              \
+//    private:                                                                   \
+//     template <typename T>                                                     \
+//     static constexpr auto check(T*)                                           \
+//         -> decltype(static_cast<Ret (T::*)(Args...)>(&T::FUNC),               \
+//                     std::true_type{});                                        \
+//                                                                               \
+//     template <typename T>                                                     \
+//     static constexpr auto check_const(T*)                                     \
+//         -> decltype(static_cast<Ret (T::*)(Args...) const>(&T::FUNC),         \
+//                     std::true_type{});                                        \
+//                                                                               \
+//     template <typename T>                                                     \
+//     static constexpr auto check_ptr(T*)                                       \
+//         -> decltype(static_cast<Ret (T::*)(Args...)>(&T::FUNC),               \
+//                     std::true_type{});                                        \
+//                                                                               \
+//     template <typename T>                                                     \
+//     static constexpr auto check_ptr_const(T*)                                 \
+//         -> decltype(static_cast<Ret (T::*)(Args...) const>(&T::FUNC),         \
+//                     std::true_type{});                                        \
+//                                                                               \
+//     template <typename T>                                                     \
+//     static constexpr auto check_ref(T*)                                       \
+//         -> decltype(static_cast<Ret (T::*)(Args...)>(&T::FUNC),               \
+//                     std::true_type{});                                        \
+//                                                                               \
+//     template <typename T>                                                     \
+//     static constexpr auto check_ref_const(T*)                                 \
+//         -> decltype(static_cast<Ret (T::*)(Args...) const>(&T::FUNC),         \
+//                     std::true_type{});                                        \
+//                                                                               \
+//     template <typename>                                                       \
+//     static constexpr std::false_type check(...);                              \
+//     template <typename>                                                       \
+//     static constexpr std::false_type check_const(...);                        \
+//     template <typename>                                                       \
+//     static constexpr std::false_type check_ptr(...);                          \
+//     template <typename>                                                       \
+//     static constexpr std::false_type check_ptr_const(...);                    \
+//     template <typename>                                                       \
+//     static constexpr std::false_type check_ref(...);                          \
+//     template <typename>                                                       \
+//     static constexpr std::false_type check_ref_const(...);                    \
+//                                                                               \
+//     using type = decltype(check<TClass>(0));                                  \
+//     using type_const = decltype(check_const<TClass>(0));                      \
+//     using type_ptr = decltype(check_ptr<TClass>(0));                          \
+//     using type_ptr_const = decltype(check_ptr_const<TClass>(0));              \
+//     using type_ref = decltype(check_ref<TClass>(0));                          \
+//     using type_ref_const = decltype(check_ref_const<TClass>(0));              \
+//                                                                               \
+//    public:                                                                    \
+//     static constexpr bool value =                                             \
+//         std::is_same<type, std::true_type>::value ||                          \
+//         std::is_same<type_const, std::true_type>::value ||                    \
+//         std::is_same<type_ptr, std::true_type>::value ||                      \
+//         std::is_same<type_ptr_const, std::true_type>::value ||                \
+//         std::is_same<type_ref, std::true_type>::value ||                      \
+//         std::is_same<type_ref_const, std::true_type>::value;                  \
+//   };
 
 }  // namespace nvm::types::utility
