@@ -125,7 +125,7 @@ std::string to_string(Enum e, Lambda lambda) {
           throw std::invalid_argument("Unsupported enum value");     \
       }                                                              \
     };                                                               \
-    return to_string(e, toStringFunc);                               \
+    return nvm::to_string(e, toStringFunc);                               \
   }
 
 }  // namespace nvm
