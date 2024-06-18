@@ -103,6 +103,8 @@ inline bool IsWhitespaceChar(char c) {
 /// @param str
 /// @return
 inline bool IsWhitespaceString(const std::string &str) {
+  if(str.empty())
+    return true;
   return str.find_first_not_of(" \t\n\v\f\r") == std::string::npos;
 };
 
