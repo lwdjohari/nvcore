@@ -21,13 +21,15 @@
 #define NVM_CORE_V2_STOPWATCH_H
 
 #include <chrono>
-
+#include <cmath>
+#include <stdexcept>
 namespace nvm {
 
 class Stopwatch final {
  public:
   Stopwatch()
-      : start_(std::chrono::high_resolution_clock::now()), running_(true) {}
+                  : start_(std::chrono::high_resolution_clock::now()),
+                    running_(true) {}
 
   // Reset the timer
   void Reset() {
@@ -35,16 +37,21 @@ class Stopwatch final {
     running_ = true;
   }
 
-  // Get the elapsed time in milliseconds
+  // Get the elapsed time in milliseconds with fractions
   double ElapsedMilliseconds() const {
     if (!running_) {
       throw std::runtime_error(
           "Timer is not running. Reset the timer to start it.");
     }
-    end_ = std::chrono::high_resolution_clock::now();
+    auto end = std::chrono::high_resolution_clock::now();
     auto elapsed =
-        std::chrono::duration_cast<std::chrono::milliseconds>(end_ - start_);
-    return static_cast<double>(elapsed.count());
+        std::chrono::duration_cast<std::chrono::microseconds>(end - start_)
+            .count();
+    double milliseconds = static_cast<double>(elapsed) / 1000.0;
+
+    // Round to two decimal places
+    // return std::round(milliseconds * 100.0) / 100.0;
+    return milliseconds;
   }
 
   // Stop the stopwatch
@@ -52,18 +59,18 @@ class Stopwatch final {
     if (!running_) {
       throw std::runtime_error("Timer is already stopped.");
     }
-    end_ = std::chrono::high_resolution_clock::now();
     running_ = false;
   }
 
   // Check if the stopwatch is running
-  bool IsRunning() const { return running_; }
+  bool IsRunning() const {
+    return running_;
+  }
 
  private:
   std::chrono::time_point<std::chrono::high_resolution_clock> start_;
-  mutable std::chrono::time_point<std::chrono::high_resolution_clock> end_;
-
   bool running_;
 };
+
 }  // namespace nvm
 #endif
