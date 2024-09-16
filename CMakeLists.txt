@@ -200,4 +200,7 @@ if(LIB_NV_CORE_USE_TEST)
 endif()       
 
 message(STATUS "NvCore LIB Configuration Done!\n")
-set(nvcore_FOUND  ON)
+if(NOT ISROOT)
+    set(nvcore_FOUND ON PARENT_SCOPE)
+endif()
+# set(nvcore_FOUND ON CACHE BOOL "NvCore FOUND")
