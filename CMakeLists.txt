@@ -99,7 +99,9 @@ endif()
 # Add dependencies source code
 
 # UTF8CPP
-if(NOT nvcore_utf8cpp_FOUND)
+if(NOT TARGET utf8cpp)
+    message(STATUS  "NvCore: Configure utf8cpp.")
+
     file(GLOB_RECURSE SOURCES_UTF8CPP CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/utfcpp/source/*.h
     )
@@ -112,7 +114,9 @@ if(NOT nvcore_utf8cpp_FOUND)
             deps/utfcpp/source/
     )
 
-    set(nvcore_utf8cpp_FOUND ON)
+    # set(nvcore_utf8cpp_FOUND ON)
+else()
+    message(STATUS  "NvCore: Use utf8cpp lib from project.")
 endif()
 
 # HH Date
