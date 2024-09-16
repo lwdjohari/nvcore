@@ -1,10 +1,20 @@
 cmake_minimum_required(VERSION 3.10)
 project(nvcore CXX)
 
+
+# Parent or other project have Nvcore
+# To do Check version is mismatch and report back
+# Current: Just not execute the cmake
+if(nvcore_FOUND)
+    message((STATUS "NvCore Lib: Already initialized, skip configuration."))
+    return()    
+endif()
+
 message(STATUS "NvCore Library")
 message(STATUS "-----------------------------")
 message(STATUS "NvCore LIB DIR:${CMAKE_CURRENT_SOURCE_DIR}")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
 
 include(ProjectCXX)
 
@@ -89,17 +99,21 @@ endif()
 # Add dependencies source code
 
 # UTF8CPP
-file(GLOB_RECURSE SOURCES_UTF8CPP CONFIGURE_DEPENDS
-    ${CMAKE_CURRENT_SOURCE_DIR}/deps/utfcpp/source/*.h
-)
+if(NOT nvcore_utf8cpp_FOUND)
+    file(GLOB_RECURSE SOURCES_UTF8CPP CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/utfcpp/source/*.h
+    )
 
-add_library(utf8cpp ${SOURCES_UTF8CPP})
-set_target_properties(utf8cpp PROPERTIES LINKER_LANGUAGE CXX)
-target_compile_features(utf8cpp PUBLIC ${CXX_FEATURE} )
-target_include_directories(utf8cpp
-    PUBLIC
-        deps/utfcpp/source/
-)
+    add_library(utf8cpp ${SOURCES_UTF8CPP})
+    set_target_properties(utf8cpp PROPERTIES LINKER_LANGUAGE CXX)
+    target_compile_features(utf8cpp PUBLIC ${CXX_FEATURE} )
+    target_include_directories(utf8cpp
+        PUBLIC
+            deps/utfcpp/source/
+    )
+
+    set(nvcore_utf8cpp_FOUND ON)
+endif()
 
 # HH Date
 option( USE_SYSTEM_TZ_DB "Use the operating system's timezone database" OFF )
