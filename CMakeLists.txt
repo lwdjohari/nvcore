@@ -186,9 +186,9 @@ target_link_libraries(${PROJECT_NAME}
 if(NVCORE_BUILD_SHARED)
     set_target_properties(${PROJECT_NAME} PROPERTIES
         LINKER_LANGUAGE CXX
-        BUILD_RPATH "$ORIGIN"                   # Use the directory of the binary
-        INSTALL_RPATH "$ORIGIN"                 # Set for installed binaries too
-        BUILD_WITH_INSTALL_RPATH TRUE           # Ensure RPATH is embedded during the build
+        # BUILD_RPATH "$ORIGIN"                   # Use the directory of the binary
+        # INSTALL_RPATH "$ORIGIN"                 # Set for installed binaries too
+        # BUILD_WITH_INSTALL_RPATH TRUE           # Ensure RPATH is embedded during the build
         VERSION ${NVSERV_LIBRARY_VERSION}       # Semantic Version of library
         SOVERSION ${NVSERV_LIBRARY_SOVERSION}   # Linker version for sysmlink
     )
