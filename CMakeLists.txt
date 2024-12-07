@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.10)
 project(nvcore CXX)
 
+# Versioning
+option(NVCORE_LIBRARY_VERSION 0.6.2)
+option(NVCORE_LIBRARY_SOVERSION 0)
+set(NVCORE_LIBRARY_VERSION 0.6.2)
+set(NVCORE_LIBRARY_SOVERSION 0)
+
+option(NVCORE_BUILD_SHARED ON)
+option(NVCORE_BUILD_STATIC OFF)
 
 # Parent or other project have Nvcore
 # To do Check version is mismatch and report back
@@ -15,6 +23,20 @@ message(STATUS "-----------------------------")
 message(STATUS "NvCore LIB DIR:${CMAKE_CURRENT_SOURCE_DIR}")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
+if(NOT DEFINED NVCORE_LIBRARY_VERSION OR NOT DEFINED NVCORE_LIBRARY_SOVERSION)
+    message(FATAL_ERROR "nv::core configuration ERROR:
+      please set option NVCORE_LIBRARY_VERSION or NVCORE_LIBRARY_SOVERSION!")
+endif()
+
+if(NOT NVCORE_BUILD_SHARED AND NOT NVCORE_BUILD_STATIC)
+    message(FATAL_ERROR "nv::core configuration ERROR:
+      please set option NVCORE_BUILD_STATIC or NVCORE_BUILD_SHARED!")
+endif()
+
+if(NVCORE_BUILD_SHARED)
+    set(_LIBRARY_TYPE SHARED)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
 
 include(ProjectCXX)
 
@@ -156,10 +178,28 @@ file(GLOB_RECURSE SOURCES_NV_CORE CONFIGURE_DEPENDS
 
 
 
-add_library(${PROJECT_NAME} STATIC ${SOURCES_NV_CORE} )
+add_library(${PROJECT_NAME} ${_LIBRARY_TYPE} ${SOURCES_NV_CORE} )
 target_link_libraries(${PROJECT_NAME}  
     utf8cpp )
-set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
+
+# Set runtime path for the shared library
+if(NVCORE_BUILD_SHARED)
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        LINKER_LANGUAGE CXX
+        BUILD_RPATH "$ORIGIN"                   # Use the directory of the binary
+        INSTALL_RPATH "$ORIGIN"                 # Set for installed binaries too
+        BUILD_WITH_INSTALL_RPATH TRUE           # Ensure RPATH is embedded during the build
+        VERSION ${NVSERV_LIBRARY_VERSION}       # Semantic Version of library
+        SOVERSION ${NVSERV_LIBRARY_SOVERSION}   # Linker version for sysmlink
+    )
+endif()
+
+if(NVCORE_BUILD_STATIC)
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        LINKER_LANGUAGE CXX
+    )
+endif()
+
 target_compile_features(${PROJECT_NAME} PUBLIC ${CXX_FEATURE})
 
 if( USE_SYSTEM_TZ_DB OR MANUAL_TZ_DB )
