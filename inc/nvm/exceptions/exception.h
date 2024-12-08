@@ -22,6 +22,11 @@ class RuntimeException : public Exception {
   explicit RuntimeException(const std::string& message) : Exception(message) {}
 };
 
+class IoException : public Exception {
+ public:
+  explicit IoException(const std::string& message) : Exception(message) {}
+};
+
 class InvalidArgException : public Exception {
  public:
   explicit InvalidArgException(const std::string& message)
