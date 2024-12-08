@@ -139,17 +139,17 @@ class DateTime {
 
   /// @brief Get the DateTime value
   /// @return
-  const std::shared_ptr<
+   std::shared_ptr<
       date::zoned_time<std::chrono::nanoseconds, const date::time_zone*>>
   TzTime() const;
 
   /// @brief Return the DateTime parts of current datetime value
   /// @return
-  const std::shared_ptr<DateTimePart> TimeParts() const;
+   std::shared_ptr<DateTimePart> TimeParts() const;
 
   /// @brief Get IANA Timezone for this current DateTime object
   /// @return
-  const std::string TzName() const;
+   std::string TzName() const;
 
   /// @brief Get Is UTC Timezone or not
   /// @return
