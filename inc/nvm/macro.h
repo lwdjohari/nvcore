@@ -20,6 +20,7 @@
 #ifndef NVM_CORE_V2_MACRO_H
 #define NVM_CORE_V2_MACRO_H
 
+#include <ostream>
 #include "nvm/types/type_utility.h"
 
 namespace nvm {
