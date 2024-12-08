@@ -23,16 +23,15 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <vector>
 
+#include "nvm/bytes/byte_declaration.h"
+#include "nvm/strings/utf8string.h"
 #include "nvm/bytes/details/internal_byte_ch.h"
 #include "nvm/bytes/details/internal_byte_u8.h"
-#include "nvm/strings/utf8string.h"
-
 namespace nvm {
 namespace bytes {
-using namespace strings;
+
 
 /// @brief
 /// @return
@@ -103,7 +102,7 @@ ByteOpResult ToBytes(
       details::ch::EncodeAsciiString(val, dest, dest_size, result);
       return result;
     }
-  } else if constexpr (std::is_same<TVal, Utf8String>::value) {
+  } else if constexpr (std::is_same<TVal, strings::Utf8String>::value) {
     // execute method for Utf8Str
     return ByteOpResult::None;
   } else if constexpr (std::is_same<TVal, bool>::value) {
@@ -446,11 +445,11 @@ std::string ToAsciiString(
 /// @param size
 /// @return
 template <typename T>
-Utf8String ToUtf8String(const T* bytes, const size_t& size) noexcept {
+strings::Utf8String ToUtf8String(const T* bytes, const size_t& size) noexcept {
   static_assert(std::is_same<T, char>::value || std::is_same<T, uint8_t>::value,
                 "T can only be char or uint8_t");
 
-  return std::move(Utf8String::MakeUtf8StringUnchecked(bytes, size));
+  return std::move(strings::Utf8String::MakeUtf8StringUnchecked(bytes, size));
 };
 
 /// @brief
