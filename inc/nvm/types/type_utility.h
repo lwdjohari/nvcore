@@ -29,6 +29,14 @@
 
 namespace nvm::types::utility {
 
+// Get if the type is same type
+template <typename T, typename U>
+struct is_type_of : std::is_same<T, U> {};
+
+// Get if the type is same type
+template <typename T, typename U>
+inline constexpr bool is_type_of_v = is_type_of<T, U>::value;
+
 // Primary template - default to false
 template <typename T>
 struct is_smart_ptr : std::false_type {};
