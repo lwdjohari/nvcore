@@ -171,6 +171,7 @@ set( BUILD_TZ_LIB  OFF )
 # Main headers and sources
 file(GLOB_RECURSE SOURCES_NV_CORE CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/inc/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/*.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.s
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/hhdate/include/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/hhdate/src/*.cpp
