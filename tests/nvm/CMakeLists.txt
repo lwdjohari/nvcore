@@ -9,7 +9,7 @@ project(nvmcore-unit-test CXX)
 
 # Set the path to the directory containing your test source files
 set(TEST_SOURCES
-
+    span_test.cc
     byte_converter_decode_test.cc
     byte_converter_encode_test_big_endian.cc
     byte_converter_encode_test_little_endian.cc
